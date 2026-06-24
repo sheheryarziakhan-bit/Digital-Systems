@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MERIDIAN — Equity &amp; Portfolio Analytics (PSX)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700;800&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --paper:#fbfaf7; --surface:#ffffff; --ink:#1b1b18; --muted:#6b6a63; --faint:#9b988f;
+  --navy:#16243a; --navy-2:#243854; --brass:#9a7b34; --brass-2:#b3923f;
+  --gain:#15784b; --loss:#b23320; --bench:#8793a6;
+  --rule:#e7e4dc; --rule-2:#d8d4ca;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter Tight',system-ui,sans-serif;color:var(--ink);background:var(--paper);line-height:1.5;-webkit-font-smoothing:antialiased}
+.serif{font-family:'Spectral',Georgia,serif}
+.num{font-family:'JetBrains Mono',monospace;font-feature-settings:"tnum" 1}
+.gain{color:var(--gain)} .loss{color:var(--loss)}
+
+/* masthead */
+.masthead{background:var(--navy);color:#f3f1ea;padding:20px 0;border-bottom:3px solid var(--brass)}
+.bar{max-width:1180px;margin:0 auto;padding:0 30px}
+.mast-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.wordmark{font-family:'Spectral',serif;font-size:23px;font-weight:700;letter-spacing:.5px}
+.wordmark span{color:var(--brass-2)}
+.mast-sub{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#9aa7bd;margin-top:3px}
+.sample-pill{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#1b1b18;background:var(--brass-2);padding:5px 11px;border-radius:3px;font-weight:700}
+
+/* sample banner */
+.banner{background:#fdf6e6;border-bottom:1px solid #ecd9a8;color:#6b551c;font-size:12.5px;padding:9px 0}
+.banner .bar{display:flex;gap:8px;align-items:center}
+
+.shell{max-width:1180px;margin:0 auto;padding:30px;display:grid;grid-template-columns:268px 1fr;gap:34px;align-items:start}
+
+/* control rail */
+.rail{position:sticky;top:24px}
+.rail h3{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint);margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
+.rail .grp{margin-bottom:26px}
+.hold{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--rule)}
+.hold input[type=checkbox]{accent-color:var(--navy);width:15px;height:15px}
+.hold-tick{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;flex:0 0 56px}
+.hold-name{font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hold-w{width:46px;font-family:'JetBrains Mono',monospace;font-size:12px;text-align:right;border:1px solid var(--rule-2);border-radius:3px;padding:3px 5px;background:var(--surface)}
+.hold.off .hold-tick,.hold.off .hold-name{opacity:.4}
+.seg{display:flex;border:1px solid var(--rule-2);border-radius:4px;overflow:hidden}
+.seg button{flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;padding:7px 0;border:none;background:var(--surface);color:var(--muted);cursor:pointer;border-right:1px solid var(--rule-2)}
+.seg button:last-child{border-right:none}
+.seg button.active{background:var(--navy);color:#fff}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.rfr-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-top:12px}
+.rfr-row input{width:62px;font-family:'JetBrains Mono',monospace;font-size:12px;text-align:right;border:1px solid var(--rule-2);border-radius:3px;padding:4px 6px}
+.switch{position:relative;width:38px;height:21px;cursor:pointer}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:var(--rule-2);border-radius:11px;transition:.15s}
+.slider::before{content:'';position:absolute;width:15px;height:15px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+.switch input:checked+.slider{background:var(--navy)}
+.switch input:checked+.slider::before{transform:translateX(17px)}
+
+/* note column */
+.note .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--brass)}
+.verdict{font-family:'Spectral',serif;font-size:clamp(24px,3.1vw,34px);line-height:1.22;font-weight:500;margin:14px 0 6px;letter-spacing:-.3px}
+.verdict .big{font-weight:700}
+.asof{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--faint);margin-bottom:26px}
+
+/* metrics ribbon */
+.ribbon{display:flex;flex-wrap:wrap;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-bottom:30px}
+.metric{flex:1;min-width:120px;padding:16px 18px 16px 0;border-right:1px solid var(--rule)}
+.metric:last-child{border-right:none}
+.metric .v{font-family:'Spectral',serif;font-size:27px;font-weight:600;line-height:1}
+.metric .l{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--faint);margin-top:7px}
+
+/* exhibits */
+.exhibit{margin-bottom:34px}
+.ex-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--ink);padding-bottom:7px;margin-bottom:16px}
+.ex-no{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--brass)}
+.ex-title{font-family:'Spectral',serif;font-size:18px;font-weight:600}
+.ex-note{font-size:12px;color:var(--muted);font-style:italic}
+.chart-box{position:relative;height:300px}
+.chart-box.short{height:240px}
+
+/* table */
+.htable{width:100%;border-collapse:collapse}
+.htable th{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);text-align:right;padding:9px 12px;border-bottom:1px solid var(--rule-2)}
+.htable th:first-child,.htable td:first-child{text-align:left}
+.htable td{padding:11px 12px;border-bottom:1px solid var(--rule);font-family:'JetBrains Mono',monospace;font-size:13px}
+.htable td.nm{font-family:'Inter Tight',sans-serif;color:var(--muted);font-size:12px}
+.htable tr.port td{font-weight:700;border-top:2px solid var(--ink);border-bottom:none}
+.swatch{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:7px;vertical-align:middle}
+
+/* methodology */
+.method{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:20px 24px;margin-top:8px}
+.method h4{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+.method dl{display:grid;grid-template-columns:130px 1fr;gap:6px 16px;font-size:12.5px}
+.method dt{font-weight:600}
+.method dd{color:var(--muted)}
+
+@media(max-width:860px){.shell{grid-template-columns:1fr;gap:24px}.rail{position:static}.method dl{grid-template-columns:1fr}}
+/* assistant */
+#chatFab{position:fixed;right:22px;bottom:22px;z-index:60;background:var(--navy);color:#f3f1ea;border:none;border-radius:30px;padding:13px 20px;font-family:'Inter Tight',sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 8px 24px rgba(22,36,58,.3);display:flex;align-items:center;gap:9px}
+#chatFab::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--brass-2)}
+#chatFab:hover{background:var(--navy-2)}
+#chatPanel{position:fixed;right:22px;bottom:22px;z-index:61;width:382px;max-width:calc(100vw - 28px);height:560px;max-height:calc(100vh - 44px);background:var(--surface);border:1px solid var(--rule-2);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden}
+#chatPanel.chat-hidden{display:none}
+.chat-head{background:var(--navy);color:#f3f1ea;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start}
+.chat-title{font-family:'Spectral',serif;font-size:16px;font-weight:600}
+.chat-sub{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.5px;color:#9aa7bd;margin-top:3px}
+.chat-head button{background:none;border:none;color:#9aa7bd;font-size:22px;cursor:pointer;line-height:1}
+.chat-log{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:11px}
+.msg{font-size:13.5px;line-height:1.5;max-width:90%;padding:10px 13px;border-radius:11px}
+.msg.bot{background:var(--paper);border:1px solid var(--rule);align-self:flex-start;border-bottom-left-radius:3px}
+.msg.user{background:var(--navy);color:#f3f1ea;align-self:flex-end;border-bottom-right-radius:3px}
+.msg .gain{color:#3ea776} .msg.bot .gain{color:var(--gain)} .msg .loss{color:#d8654f} .msg.bot .loss{color:var(--loss)}
+.chat-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px}
+.chip-q{font-size:11px;border:1px solid var(--rule-2);background:var(--surface);color:var(--muted);border-radius:14px;padding:5px 10px;cursor:pointer;font-family:'Inter Tight',sans-serif}
+.chip-q:hover{border-color:var(--navy);color:var(--navy)}
+.chat-input{display:flex;gap:8px;padding:11px 13px;border-top:1px solid var(--rule)}
+.chat-input input{flex:1;border:1px solid var(--rule-2);border-radius:8px;padding:9px 12px;font-family:'Inter Tight',sans-serif;font-size:13px;outline:none}
+.chat-input input:focus{border-color:var(--navy)}
+.chat-input button{background:var(--navy);color:#fff;border:none;border-radius:8px;width:38px;font-size:16px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="bar mast-row">
+    <div>
+      <div class="wordmark">MERIDIAN<span>.</span></div>
+      <div class="mast-sub">Equity &amp; Portfolio Analytics · Pakistan Stock Exchange</div>
+    </div>
+    <span class="sample-pill">Sample data — load your own</span>
+  </div>
+</header>
+
+<div class="banner"><div class="bar">⚠ &nbsp;Figures below run on <b>&nbsp;illustrative sample data</b>&nbsp;, not live PSX prices. Replace <code>PRICES</code> in the code with a real exported CSV to make this genuine.</div></div>
+
+<div class="shell">
+
+  <!-- CONTROL RAIL -->
+  <aside class="rail">
+    <div class="grp">
+      <h3>Holdings &amp; weights</h3>
+      <div id="holdList"></div>
+    </div>
+    <div class="grp">
+      <h3>Period</h3>
+      <div class="seg" id="rangeSeg">
+        <button data-range="252">1Y</button>
+        <button data-range="504">2Y</button>
+        <button data-range="full" class="active">All</button>
+      </div>
+    </div>
+    <div class="grp">
+      <h3>Settings</h3>
+      <div class="toggle-row">
+        <span>Show KSE-100 benchmark</span>
+        <label class="switch"><input type="checkbox" id="benchTog" checked><span class="slider"></span></label>
+      </div>
+      <div class="rfr-row">
+        <span>Risk-free rate (annual)</span>
+        <span><input type="number" id="rfrInp" value="11.0" step="0.5"> %</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- NOTE COLUMN -->
+  <section class="note">
+    <div class="eyebrow" id="eyebrow">Portfolio analysis</div>
+    <div class="verdict serif" id="verdict">—</div>
+    <div class="asof" id="asof">—</div>
+
+    <div class="ribbon" id="ribbon"></div>
+
+    <!-- Exhibit 1 -->
+    <div class="exhibit">
+      <div class="ex-head">
+        <div><span class="ex-no">Exhibit 1</span> &nbsp; <span class="ex-title">Growth of PKR 100 invested</span></div>
+        <span class="ex-note">portfolio vs. benchmark, rebased</span>
+      </div>
+      <div class="chart-box"><canvas id="growthChart"></canvas></div>
+    </div>
+
+    <!-- Exhibit 2 -->
+    <div class="exhibit">
+      <div class="ex-head">
+        <div><span class="ex-no">Exhibit 2</span> &nbsp; <span class="ex-title">Drawdown — depth below prior peak</span></div>
+        <span class="ex-note">how far underwater, and for how long</span>
+      </div>
+      <div class="chart-box short"><canvas id="ddChart"></canvas></div>
+    </div>
+
+    <!-- Exhibit 3 -->
+    <div class="exhibit">
+      <div class="ex-head">
+        <div><span class="ex-no">Exhibit 3</span> &nbsp; <span class="ex-title">Risk vs. return by holding</span></div>
+        <span class="ex-note">annualised return against volatility</span>
+      </div>
+      <div class="chart-box short"><canvas id="scatterChart"></canvas></div>
+    </div>
+
+    <!-- Exhibit 4 -->
+    <div class="exhibit">
+      <div class="ex-head">
+        <div><span class="ex-no">Exhibit 4</span> &nbsp; <span class="ex-title">Holdings breakdown</span></div>
+        <span class="ex-note" id="tblNote">—</span>
+      </div>
+      <table class="htable" id="holdTable"><thead><tr>
+        <th>Holding</th><th>Weight</th><th>Total return</th><th>Annualised</th><th>Volatility</th><th>Max drawdown</th><th>Beta</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="method">
+      <h4>Methodology &amp; definitions</h4>
+      <dl>
+        <dt>Annualised return</dt><dd>Compound annual growth rate — the steady yearly rate that turns the start value into the end value over the period (252 trading days/year).</dd>
+        <dt>Volatility</dt><dd>Standard deviation of daily returns, annualised (×√252). A measure of how much the value swings.</dd>
+        <dt>Max drawdown</dt><dd>The largest peak-to-trough decline over the period — the worst loss an investor holding throughout would have endured.</dd>
+        <dt>Sharpe ratio</dt><dd>(Annualised return − risk-free rate) ÷ volatility. Return earned per unit of risk taken. Risk-free rate is editable above because Pakistan's rates move a lot.</dd>
+        <dt>Beta</dt><dd>Sensitivity to the KSE-100. Beta 1.2 means the holding tends to move 1.2× the market.</dd>
+        <dt>Portfolio</dt><dd>Weighted blend of selected holdings, rebalanced to the weights shown. Equal weight if left at default.</dd>
+      </dl>
+    </div>
+  </section>
+</div>
+
+<button id="chatFab">Ask the assistant</button>
+<div id="chatPanel" class="chat-hidden">
+  <div class="chat-head">
+    <div><div class="chat-title">Portfolio Assistant</div><div class="chat-sub">EXPLAINS WHAT THE DATA SHOWS · NOT INVESTMENT ADVICE</div></div>
+    <button id="chatClose">&times;</button>
+  </div>
+  <div class="chat-log" id="chatLog"></div>
+  <div class="chat-chips" id="chatChips"></div>
+  <div class="chat-input"><input id="chatInput" placeholder="Ask about risk, returns, a holding..."><button id="chatSend">&rarr;</button></div>
+</div>
+
+<script>
+/* ============================================================================
+   MERIDIAN — PSX Equity & Portfolio Analytics
+   ----------------------------------------------------------------------------
+   *** SAMPLE DATA ***  The PRICES below are SYNTHETIC and for demonstration
+   only. To make this real: replace each ticker's array with actual daily
+   closing prices exported from PSX / your broker (oldest -> newest, aligned to
+   the same DATES array). Then it is a genuine analysis of real data.
+   Expected CSV shape per holding:  Date,Close   (ascending by date)
+   ============================================================================ */
+
+/* ---- tickers (real PSX names; prices are illustrative until you swap real data) ---- */
+const META = {
+  ENGRO:{name:'Engro Corporation', beta:1.05, drift:0.00050, idio:0.0100, p0:255},
+  LUCK :{name:'Lucky Cement',      beta:1.20, drift:0.00060, idio:0.0120, p0:610},
+  MEBL :{name:'Meezan Bank',       beta:0.85, drift:0.00072, idio:0.0090, p0:118},
+  OGDC :{name:'Oil & Gas Dev. Co', beta:0.92, drift:-0.00010,idio:0.0110, p0:92},
+  PSO  :{name:'Pakistan State Oil',beta:1.15, drift:0.00005, idio:0.0130, p0:178},
+};
+const TICKERS = Object.keys(META);
+
+/* ---- build dates: ~3y of weekdays ---- */
+const NDAYS=756;
+const DATES=[]; {
+  let d=new Date('2026-06-12T00:00:00'); let arr=[];
+  while(arr.length<NDAYS){ const dow=d.getDay(); if(dow!==0&&dow!==6) arr.push(new Date(d)); d.setDate(d.getDate()-1); }
+  DATES.push(...arr.reverse());
+}
+const fmtD=d=>d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'});
+
+/* ---- seeded RNG + synthetic correlated prices (REPLACE WITH REAL DATA) ---- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const rng=mulberry32(70824);
+const gauss=()=>{let u=0,v=0;while(!u)u=rng();while(!v)v=rng();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);};
+
+// market (KSE-100) daily returns with two correction episodes
+const mktRet=new Array(NDAYS), mkt=new Array(NDAYS); let mlv=46000;
+for(let i=0;i<NDAYS;i++){
+  let mu=0.00060, sig=0.0110;
+  if(i>=190&&i<235) mu=-0.0070;        // sharp correction ~ -25%
+  if(i>=235&&i<275) mu= 0.0048;        // recovery
+  if(i>=500&&i<530) mu=-0.0045;        // milder dip
+  const r=mu+sig*gauss(); mktRet[i]=r; mlv*=(1+r); mkt[i]=mlv;
+}
+const PRICES={}; // <-- the array to replace with real closing prices
+TICKERS.forEach(t=>{
+  const m=META[t]; const arr=new Array(NDAYS); let lv=m.p0;
+  for(let i=0;i<NDAYS;i++){ const r=m.beta*mktRet[i]+m.drift+m.idio*gauss(); lv*=(1+r); arr[i]=lv; }
+  PRICES[t]=arr;
+});
+
+/* ---- finance helpers ---- */
+const rets=(p,a,b)=>{const o=[];for(let i=a+1;i<=b;i++)o.push(p[i]/p[i-1]-1);return o;};
+const mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
+const std=a=>{const m=mean(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1));};
+const annVol=r=>std(r)*Math.sqrt(252);
+const cagr=(p0,p1,n)=>Math.pow(p1/p0,252/n)-1;
+function maxDD(series){let peak=series[0],mdd=0;for(const v of series){if(v>peak)peak=v;const dd=v/peak-1;if(dd<mdd)mdd=dd;}return mdd;}
+function ddSeries(series){let peak=series[0];return series.map(v=>{if(v>peak)peak=v;return (v/peak-1)*100;});}
+function beta(sr,mr){const mm=mean(mr),sm=mean(sr);let cov=0,varm=0;for(let i=0;i<sr.length;i++){cov+=(sr[i]-sm)*(mr[i]-mm);varm+=(mr[i]-mm)**2;}return cov/varm;}
+const pct=(x,d=1)=>(x*100).toFixed(d)+'%';
+const signed=(x,d=1)=>(x>=0?'+':'')+(x*100).toFixed(d)+'%';
+
+/* ---- state ---- */
+let selected={ENGRO:true,LUCK:true,MEBL:true,OGDC:true,PSO:false};
+let weights={ENGRO:25,LUCK:25,MEBL:25,OGDC:25,PSO:0};
+let range='full', showBench=true, rfr=0.11;
+let charts={};
+const COLORS={ENGRO:'#16243a',LUCK:'#9a7b34',MEBL:'#15784b',OGDC:'#b23320',PSO:'#5b6b8c'};
+
+/* ---- build control rail ---- */
+function buildRail(){
+  document.getElementById('holdList').innerHTML=TICKERS.map(t=>`
+    <div class="hold ${selected[t]?'':'off'}" data-t="${t}">
+      <input type="checkbox" ${selected[t]?'checked':''} data-chk="${t}">
+      <span class="hold-tick">${t}</span>
+      <span class="hold-name">${META[t].name}</span>
+      <input class="hold-w num" type="number" min="0" value="${weights[t]}" data-w="${t}">
+    </div>`).join('');
+  document.querySelectorAll('[data-chk]').forEach(c=>c.onchange=e=>{selected[e.target.dataset.chk]=e.target.checked;recompute();buildRail();});
+  document.querySelectorAll('[data-w]').forEach(c=>c.oninput=e=>{weights[e.target.dataset.w]=parseFloat(e.target.value)||0;recompute();});
+}
+
+function rangeBounds(){const b=NDAYS-1;const a=range==='full'?0:Math.max(0,NDAYS-parseInt(range));return [a,b];}
+
+function recompute(){
+  const [a,b]=rangeBounds(), n=b-a;
+  const active=TICKERS.filter(t=>selected[t]);
+  if(!active.length){document.getElementById('verdict').textContent='Select at least one holding.';return;}
+  const wsum=active.reduce((s,t)=>s+(weights[t]||0),0)||1;
+  const w={}; active.forEach(t=>w[t]=(weights[t]||0)/wsum);
+
+  // portfolio price index (rebased to 100), from weighted daily returns rebalanced
+  const port=new Array(n+1); port[0]=100;
+  const mr=rets(mkt,a,b);
+  for(let i=1;i<=n;i++){ let r=0; active.forEach(t=>{r+=w[t]*(PRICES[t][a+i]/PRICES[t][a+i-1]-1);}); port[i]=port[i-1]*(1+r); }
+  const benchIdx=mkt.slice(a,b+1).map(v=>v/mkt[a]*100);
+
+  const pr=rets(port,0,n);
+  const pCagr=cagr(port[0],port[n],n), pVol=annVol(pr), pTot=port[n]/port[0]-1, pMdd=maxDD(port), pSharpe=(pCagr-rfr)/pVol;
+  window.LAST={a,b,active,w,pCagr,pVol,pTot,pMdd,pSharpe};
+
+  // verdict + ribbon
+  document.getElementById('eyebrow').textContent=`${active.length}-holding portfolio · PSX · ${range==='full'?'3-year':range/252+'-year'} window`;
+  document.getElementById('verdict').innerHTML=
+    `This ${active.length}-holding portfolio compounded at <span class="big ${pCagr>=0?'gain':'loss'}">${signed(pCagr)}</span> a year, with <span class="big">${pct(pVol)}</span> volatility and a worst drawdown of <span class="big loss">${pct(pMdd)}</span>.`;
+  document.getElementById('asof').textContent=`${fmtD(DATES[a])} → ${fmtD(DATES[b])}  ·  ${n+1} trading days  ·  rebased to 100`;
+
+  const ribbon=[
+    ['Total return', signed(pTot), pTot>=0?'gain':'loss'],
+    ['Annualised', signed(pCagr), pCagr>=0?'gain':'loss'],
+    ['Volatility', pct(pVol), ''],
+    ['Max drawdown', pct(pMdd), 'loss'],
+    ['Sharpe', pSharpe.toFixed(2), pSharpe>=0?'gain':'loss'],
+  ];
+  document.getElementById('ribbon').innerHTML=ribbon.map(m=>`<div class="metric"><div class="v ${m[2]}">${m[1]}</div><div class="l">${m[0]}</div></div>`).join('');
+
+  drawGrowth(a,b,port,benchIdx);
+  drawDD(a,b,port);
+  drawScatter(a,b,active,w,pVol,pCagr);
+  buildTable(a,b,active,w,mr);
+}
+
+function baseOpts(yLabel,yFmt){return{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  plugins:{legend:{labels:{font:{family:'Inter Tight',size:11},boxWidth:10,usePointStyle:true,padding:14}},
+    tooltip:{titleFont:{family:'JetBrains Mono',size:10},bodyFont:{family:'JetBrains Mono',size:11},
+      callbacks:{label:c=>` ${c.dataset.label}: ${yFmt?yFmt(c.parsed.y):c.parsed.y}`}}},
+  scales:{x:{ticks:{maxTicksLimit:7,autoSkip:true,color:'#9b988f',font:{family:'JetBrains Mono',size:9}},grid:{display:false}},
+    y:{title:{display:!!yLabel,text:yLabel,color:'#6b6a63',font:{family:'JetBrains Mono',size:10}},ticks:{color:'#9b988f',font:{family:'JetBrains Mono',size:9}},grid:{color:'#efece4'}}}};}
+
+function drawGrowth(a,b,port,bench){
+  const labels=DATES.slice(a,b+1).map(fmtD);
+  const ds=[{label:'Portfolio',data:port,borderColor:'#16243a',backgroundColor:'#16243a',borderWidth:2,pointRadius:0,tension:.1}];
+  if(showBench) ds.push({label:'KSE-100',data:bench,borderColor:'#8793a6',backgroundColor:'#8793a6',borderWidth:1.4,borderDash:[5,4],pointRadius:0,tension:.1});
+  if(charts.g)charts.g.destroy();
+  charts.g=new Chart(document.getElementById('growthChart'),{type:'line',data:{labels,datasets:ds},options:baseOpts('PKR (rebased)',v=>v.toFixed(1))});
+}
+function drawDD(a,b,port){
+  const labels=DATES.slice(a,b+1).map(fmtD); const dd=ddSeries(port);
+  if(charts.d)charts.d.destroy();
+  charts.d=new Chart(document.getElementById('ddChart'),{type:'line',
+    data:{labels,datasets:[{label:'Drawdown',data:dd,borderColor:'#b23320',backgroundColor:'rgba(178,51,32,.13)',borderWidth:1.4,pointRadius:0,fill:true,tension:.1}]},
+    options:{...baseOpts('% below peak',v=>v.toFixed(1)+'%'),plugins:{legend:{display:false},tooltip:baseOpts().plugins.tooltip}}});
+}
+function drawScatter(a,b,active,w,pVol,pCagr){
+  const pts=active.map(t=>{const r=rets(PRICES[t],a,b);return{x:annVol(r)*100,y:cagr(PRICES[t][a],PRICES[t][b],b-a)*100,t};});
+  const data=pts.map(p=>({x:p.x,y:p.y}));
+  if(charts.s)charts.s.destroy();
+  charts.s=new Chart(document.getElementById('scatterChart'),{type:'scatter',
+    data:{datasets:[
+      {label:'Holdings',data:data,pointBackgroundColor:pts.map(p=>COLORS[p.t]),pointRadius:7,pointHoverRadius:9},
+      {label:'Portfolio',data:[{x:pVol*100,y:pCagr*100}],pointBackgroundColor:'#9a7b34',pointStyle:'rectRot',pointRadius:10}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{family:'Inter Tight',size:11},usePointStyle:true,padding:14}},
+        tooltip:{callbacks:{label:c=>{const i=c.dataIndex;const lab=c.datasetIndex===1?'Portfolio':pts[i].t;return ` ${lab}: ${c.parsed.y.toFixed(1)}% return, ${c.parsed.x.toFixed(1)}% vol`;}}}},
+      scales:{x:{title:{display:true,text:'Volatility (annualised %)',color:'#6b6a63',font:{family:'JetBrains Mono',size:10}},ticks:{color:'#9b988f',font:{family:'JetBrains Mono',size:9}},grid:{color:'#efece4'}},
+        y:{title:{display:true,text:'Return (annualised %)',color:'#6b6a63',font:{family:'JetBrains Mono',size:10}},ticks:{color:'#9b988f',font:{family:'JetBrains Mono',size:9}},grid:{color:'#efece4'}}}}});
+}
+function buildTable(a,b,active,w,mr){
+  document.getElementById('tblNote').textContent=`${active.length} holdings · ${range==='full'?'full period':range/252+'-year'}`;
+  const tb=document.querySelector('#holdTable tbody');
+  let rows=active.map(t=>{
+    const r=rets(PRICES[t],a,b), tot=PRICES[t][b]/PRICES[t][a]-1, cg=cagr(PRICES[t][a],PRICES[t][b],b-a), v=annVol(r), dd=maxDD(PRICES[t].slice(a,b+1)), bt=beta(r,mr);
+    return `<tr>
+      <td class="nm"><span class="swatch" style="background:${COLORS[t]}"></span><b style="font-family:'JetBrains Mono'">${t}</b> ${META[t].name}</td>
+      <td>${(w[t]*100).toFixed(0)}%</td>
+      <td class="${tot>=0?'gain':'loss'}">${signed(tot)}</td>
+      <td class="${cg>=0?'gain':'loss'}">${signed(cg)}</td>
+      <td>${pct(v)}</td>
+      <td class="loss">${pct(dd)}</td>
+      <td>${bt.toFixed(2)}</td></tr>`;
+  }).join('');
+  tb.innerHTML=rows;
+}
+
+/* ---- wiring ---- */
+document.querySelectorAll('#rangeSeg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#rangeSeg button').forEach(x=>x.classList.remove('active'));b.classList.add('active');range=b.dataset.range;recompute();});
+document.getElementById('benchTog').onchange=e=>{showBench=e.target.checked;recompute();};
+document.getElementById('rfrInp').oninput=e=>{rfr=(parseFloat(e.target.value)||0)/100;recompute();};
+
+/* ---- guided assistant (scripted; reads computed data; never advises) ---- */
+function financeAnswer(q){
+  const s=q.toLowerCase(), L=window.LAST;
+  if(!L||!L.active.length) return "Pick at least one holding in the left rail and I'll explain what the numbers say.";
+  if(/should i|shall i|recommend|advice|advise|will it|going to|predict|forecast|worth (buying|it)|good (buy|stock|investment)|buy or sell|\bbuy\b|\bsell\b/.test(s))
+    return "I don't give investment advice or predictions — that's deliberately switched off. I only lay out what the historical data shows so <b>you</b> can decide. Try: <i>\u201chow did the portfolio do?\u201d</i>, <i>\u201cwhich holding is riskiest?\u201d</i>, or <i>\u201cis it riskier than the market?\u201d</i>";
+  const mr=rets(mkt,L.a,L.b);
+  const H=L.active.map(t=>{const r=rets(PRICES[t],L.a,L.b);return{t,name:META[t].name,vol:annVol(r),cg:cagr(PRICES[t][L.a],PRICES[t][L.b],L.b-L.a),tot:PRICES[t][L.b]/PRICES[t][L.a]-1,dd:maxDD(PRICES[t].slice(L.a,L.b+1)),beta:beta(r,mr)};});
+  const cls=x=>x>=0?'gain':'loss';
+  const h=H.find(x=>s.includes(x.t.toLowerCase())||s.includes(x.name.toLowerCase().split(' ')[0]));
+  if(h && /(tell|about|how|what|stat|detail|info|did)/.test(s))
+    return `<b>${h.t} \u2014 ${h.name}</b><br>Over this period it returned <b class="${cls(h.tot)}">${signed(h.tot)}</b> in total (about <b>${signed(h.cg)}</b>/yr), with <b>${pct(h.vol)}</b> volatility and a worst drawdown of <b class="loss">${pct(h.dd)}</b>. Its beta is <b>${h.beta.toFixed(2)}</b> \u2014 it tends to move ${h.beta>1.05?'more than':h.beta<0.95?'less than':'in line with'} the market.`;
+  if(/riskiest|most risk|most volatile|biggest swing/.test(s)){const m=H.slice().sort((a,b)=>b.vol-a.vol)[0];return `The riskiest holding by volatility is <b>${m.t} (${m.name})</b> at <b>${pct(m.vol)}</b> \u2014 it swings the most. Its worst drawdown was <b class="loss">${pct(m.dd)}</b>. Riskier isn't automatically worse; it just means a bumpier ride.`;}
+  if(/safest|least risk|least volatile|most stable|calmest|steadiest/.test(s)){const m=H.slice().sort((a,b)=>a.vol-b.vol)[0];return `The steadiest holding is <b>${m.t} (${m.name})</b> \u2014 lowest volatility at <b>${pct(m.vol)}</b>.`;}
+  if(/best|top|highest return|strongest|performer|winner/.test(s)){const m=H.slice().sort((a,b)=>b.cg-a.cg)[0];return `The strongest performer was <b>${m.t} (${m.name})</b> at <b class="gain">${signed(m.cg)}</b>/yr. Worth remembering: what did well in the past isn't a promise about the future.`;}
+  if(/worst|lowest return|weakest|loser|underperform/.test(s)){const m=H.slice().sort((a,b)=>a.cg-b.cg)[0];return `The weakest performer was <b>${m.t} (${m.name})</b> at <b class="${cls(m.cg)}">${signed(m.cg)}</b>/yr.`;}
+  if(/than .*(market|kse|benchmark|index)|riskier than|vs.*(market|kse)|compared.*(market|kse)|market.*(risk|volatil)/.test(s)){
+    const mvol=annVol(mr)*100, pbeta=L.active.reduce((a,t)=>a+L.w[t]*H.find(x=>x.t===t).beta,0);
+    return `The market (KSE-100) ran at roughly <b>${mvol.toFixed(1)}%</b> volatility over this window; your portfolio is at <b>${pct(L.pVol)}</b>. Its beta is about <b>${pbeta.toFixed(2)}</b> \u2014 so it tends to move ${pbeta>1.05?'<b>more</b> than':pbeta<0.95?'<b>less</b> than':'roughly in line with'} the overall market.`;
+  }
+  if(/drawdown/.test(s)) return `<b>Drawdown</b> is how far an investment has fallen from its highest previous point. This portfolio's worst was <b class="loss">${pct(L.pMdd)}</b> \u2014 the deepest dip someone holding throughout would have sat through before it recovered. It's the \u201ccould I stomach that?\u201d number.`;
+  if(/sharpe/.test(s)) return `<b>Sharpe ratio</b> = return earned per unit of risk, above a safe (risk-free) rate. Yours is <b>${L.pSharpe.toFixed(2)}</b>. Higher is better; below zero means risk-free assets would have done better over this window. (You can change the risk-free rate in the left rail.)`;
+  if(/beta/.test(s)) return `<b>Beta</b> measures how much something moves relative to the whole market. 1.0 = moves with it, 1.3 = 30% more, 0.7 = 30% less. A quick read on market sensitivity.`;
+  if(/volatil|jumpy|how risky|\brisk\b|bumpy/.test(s)) return `<b>Volatility</b> is how much the value bounces around \u2014 the bumpiness of the ride. Your portfolio's is <b>${pct(L.pVol)}</b> annualised. Higher means wilder swings, not necessarily worse returns.`;
+  if(/cagr|annualis|annualiz|compound|per year|yearly return/.test(s)) return `<b>Annualised return (CAGR)</b> is the steady yearly rate that turns the start value into the end value. Yours is <b class="${cls(L.pCagr)}">${signed(L.pCagr)}</b>/yr \u2014 it irons the bumps into one comparable number.`;
+  if(/summary|overview|how did|overall|tell me|explain|what.*(data|saying|show|mean)/.test(s))
+    return `Plain version: over this window your ${L.active.length}-holding portfolio ${L.pTot>=0?'grew':'fell'} <b class="${cls(L.pTot)}">${signed(L.pTot)}</b> in total \u2014 about <b>${signed(L.pCagr)}</b> a year. The ride carried <b>${pct(L.pVol)}</b> volatility and its worst stretch was a <b class="loss">${pct(L.pMdd)}</b> fall from peak. Ask me to break down any holding, or what any term means.`;
+  return "I explain what this data shows \u2014 try <i>risk</i>, <i>returns</i>, <i>drawdown</i>, a specific holding (e.g. \u201ctell me about MEBL\u201d), or how it compares to the market. I don't give buy/sell advice.";
+}
+function setupChat(){
+  const log=document.getElementById('chatLog'), input=document.getElementById('chatInput');
+  const chips=["How did the portfolio do?","Which holding is riskiest?","Is it riskier than the market?","What does drawdown mean?"];
+  const add=(role,html)=>{const d=document.createElement('div');d.className='msg '+role;d.innerHTML=html;log.appendChild(d);log.scrollTop=log.scrollHeight;};
+  const ask=q=>{add('user',q.replace(/</g,'&lt;'));setTimeout(()=>add('bot',financeAnswer(q)),130);};
+  document.getElementById('chatChips').innerHTML=chips.map(c=>`<button class="chip-q">${c}</button>`).join('');
+  document.querySelectorAll('.chip-q').forEach(b=>b.onclick=()=>ask(b.textContent));
+  const send=()=>{const v=input.value.trim();if(!v)return;input.value='';ask(v);};
+  document.getElementById('chatSend').onclick=send;
+  input.onkeydown=e=>{if(e.key==='Enter')send();};
+  document.getElementById('chatFab').onclick=()=>{document.getElementById('chatPanel').classList.remove('chat-hidden');document.getElementById('chatFab').style.display='none';if(!log.children.length)add('bot',"Hi \u2014 I'm a guided assistant for this analysis. I explain what the numbers mean in plain language, and I never give investment advice. What would you like to understand?");};
+  document.getElementById('chatClose').onclick=()=>{document.getElementById('chatPanel').classList.add('chat-hidden');document.getElementById('chatFab').style.display='flex';};
+}
+
+buildRail(); recompute(); setupChat();
+</script>
+</body>
+</html>

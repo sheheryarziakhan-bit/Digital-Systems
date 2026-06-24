@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TR-01 Column — Instrumentation Monitoring &amp; Early-Warning System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f4f4f3; --surface:#fff; --surface-2:#fafaf9; --border:#e7e5e4; --border-2:#d6d3d1;
+  --text:#1c1917; --muted:#57534e; --subtle:#78716c;
+  --primary:#1e293b; --accent:#b45309;
+  --ok:#15803d; --ok-bg:#dcfce7;
+  --warn:#b45309; --warn-bg:#fef3c7;
+  --alarm:#b91c1c; --alarm-bg:#fee2e2;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'IBM Plex Sans',system-ui,sans-serif;color:var(--text);background:var(--bg)}
+.mono{font-family:'IBM Plex Mono',monospace;font-feature-settings:"tnum" 1}
+
+.header{background:var(--primary);color:#fafaf9;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--accent);flex-wrap:wrap;gap:12px}
+.header-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(250,250,249,.55);letter-spacing:2px;text-transform:uppercase}
+.header-title{font-size:17px;font-weight:600;letter-spacing:.3px}
+.header-right{display:flex;align-items:center;gap:18px;font-family:'IBM Plex Mono',monospace;font-size:12px}
+.simtime{color:#fafaf9}
+.simtime b{color:#fbbf24}
+
+.container{max-width:1560px;margin:0 auto;padding:20px 28px}
+
+/* timeline / playback */
+.playbar{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin-bottom:18px}
+.playbar-top{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;border:1px solid var(--border-2);background:var(--surface);color:var(--text);cursor:pointer;border-radius:4px;transition:.12s}
+.btn:hover{background:var(--surface-2)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--primary);color:#fafaf9;border-color:var(--primary)}
+.btn.jump{border-style:dashed}
+.btn.jump.foul{color:var(--warn)} .btn.jump.feed{color:var(--accent)} .btn.jump.flood{color:var(--alarm)}
+.speed{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--subtle);margin-left:auto;display:flex;align-items:center;gap:8px}
+.scrub{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--ok) 0%,var(--ok) 16%,var(--warn) 16%,var(--warn) 45%,var(--ok) 45%,var(--ok) 52%,var(--accent) 52%,var(--accent) 64%,var(--ok) 64%,var(--ok) 77%,var(--alarm) 77%,var(--alarm) 90%,var(--ok) 90%,var(--ok) 100%);outline:none;cursor:pointer}
+.scrub::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:22px;border-radius:3px;background:var(--primary);border:2px solid #fff;box-shadow:0 0 0 1px var(--border-2);cursor:pointer}
+.scrub::-moz-range-thumb{width:16px;height:22px;border-radius:3px;background:var(--primary);border:2px solid #fff;cursor:pointer}
+.scrub-labels{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--subtle);margin-top:6px}
+
+/* kpi */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
+.kpi{background:var(--surface);border:1px solid var(--border);padding:14px 16px;position:relative;overflow:hidden}
+.kpi-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--subtle);margin-bottom:10px}
+.kpi-value{font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:500;line-height:1}
+.kpi-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px}
+.kpi-bar{position:absolute;bottom:0;left:0;height:3px;width:100%;background:var(--border)}
+.kpi.ok .kpi-value{color:var(--ok)} .kpi.ok .kpi-bar{background:var(--ok)}
+.kpi.warn .kpi-value{color:var(--warn)} .kpi.warn .kpi-bar{background:var(--warn)}
+.kpi.alarm .kpi-value{color:var(--alarm)} .kpi.alarm .kpi-bar{background:var(--alarm)}
+
+.grid-main{display:grid;grid-template-columns:1fr 380px;gap:16px;margin-bottom:18px}
+.panel{background:var(--surface);border:1px solid var(--border)}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;padding:16px 18px;border-bottom:1px solid var(--border)}
+.panel-title{font-size:14px;font-weight:600}
+.panel-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--subtle);letter-spacing:.5px}
+.panel-body{padding:16px 18px}
+
+/* alerts */
+.alert{border-left:4px solid var(--border-2);background:var(--surface-2);padding:13px 14px;margin-bottom:12px;border-radius:0 4px 4px 0}
+.alert:last-child{margin-bottom:0}
+.alert.warn{border-color:var(--warn);background:var(--warn-bg)}
+.alert.alarm{border-color:var(--alarm);background:var(--alarm-bg)}
+.alert-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:8px}
+.alert-name{font-size:13px;font-weight:600}
+.alert-sev{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:2px;font-weight:600;white-space:nowrap}
+.alert-sev.warn{background:var(--warn);color:#fff} .alert-sev.alarm{background:var(--alarm);color:#fff}
+.alert-row{font-size:12px;color:var(--muted);margin:4px 0;line-height:1.45}
+.alert-row .lab{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--subtle);display:block;margin-top:7px}
+.alert-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.tagchip{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:1px 6px;background:var(--surface);border:1px solid var(--border-2);border-radius:2px;color:var(--muted)}
+.alert-eta{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--alarm)}
+.no-alerts{text-align:center;color:var(--subtle);padding:30px 10px;font-size:13px}
+.no-alerts .ok-mark{font-size:26px;color:var(--ok);display:block;margin-bottom:8px}
+
+/* status board */
+.loop-group{margin-bottom:16px}
+.loop-group:last-child{margin-bottom:0}
+.loop-name{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--subtle);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.tile{border:1px solid var(--border);border-radius:4px;padding:8px 9px;cursor:pointer;position:relative;transition:.1s;background:var(--surface)}
+.tile:hover{border-color:var(--border-2);background:var(--surface-2)}
+.tile.sel{outline:2px solid var(--primary);outline-offset:-1px}
+.tile.warn{background:var(--warn-bg)} .tile.alarm{background:var(--alarm-bg)}
+.tile-tag{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600}
+.tile-desc{font-size:9px;color:var(--subtle);margin:2px 0 5px;line-height:1.2;height:22px;overflow:hidden}
+.tile-val{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500}
+.tile-unit{font-size:9px;color:var(--muted)}
+.tile-dot{position:absolute;top:8px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.tile.warn .tile-dot{background:var(--warn)} .tile.alarm .tile-dot{background:var(--alarm)}
+.trend-arrow{font-size:10px;margin-left:3px}
+
+/* trends */
+.trend-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.win-btns{display:flex;gap:4px}
+.win-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.5px;padding:4px 9px;border:1px solid var(--border-2);background:var(--surface);cursor:pointer;border-radius:3px;color:var(--muted)}
+.win-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.chart-wrap{position:relative;height:340px;margin-top:6px}
+.sel-hint{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--subtle);margin-top:8px}
+.clear-sel{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--accent);cursor:pointer;background:none;border:none;padding:0}
+
+@media(max-width:1180px){.grid-main{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.kpis{grid-template-columns:1fr}.container{padding:14px}.header{padding:12px 16px}}
+/* assistant */
+#chatFab{position:fixed;right:22px;bottom:22px;z-index:60;background:var(--primary);color:#fafaf9;border:none;border-radius:30px;padding:13px 20px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 8px 24px rgba(30,41,59,.3);display:flex;align-items:center;gap:9px}
+#chatFab::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--accent)}
+#chatPanel{position:fixed;right:22px;bottom:22px;z-index:61;width:392px;max-width:calc(100vw - 28px);height:560px;max-height:calc(100vh - 44px);background:var(--surface);border:1px solid var(--border-strong);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden}
+#chatPanel.chat-hidden{display:none}
+.chat-head{background:var(--primary);color:#fafaf9;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--accent)}
+.chat-title{font-size:15px;font-weight:600}
+.chat-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.5px;color:rgba(250,250,249,.55);margin-top:3px}
+.chat-head button{background:none;border:none;color:rgba(250,250,249,.6);font-size:22px;cursor:pointer;line-height:1}
+.chat-log{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:11px}
+.msg{font-size:13px;line-height:1.5;max-width:90%;padding:10px 13px;border-radius:11px}
+.msg.bot{background:var(--surface-elev);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:3px}
+.msg.user{background:var(--primary);color:#fafaf9;align-self:flex-end;border-bottom-right-radius:3px}
+.chat-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px}
+.chip-q{font-size:11px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text-muted);border-radius:14px;padding:5px 10px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
+.chip-q:hover{border-color:var(--primary);color:var(--primary)}
+.chat-input{display:flex;gap:8px;padding:11px 13px;border-top:1px solid var(--border)}
+.chat-input input{flex:1;border:1px solid var(--border-strong);border-radius:8px;padding:9px 12px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;outline:none}
+.chat-input button{background:var(--primary);color:#fff;border:none;border-radius:8px;width:38px;font-size:16px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div>
+    <div class="header-sub">DISTILLATION COLUMN TR-01 · INSTRUMENTATION MONITORING</div>
+    <div class="header-title">Predictive Early-Warning System</div>
+  </div>
+  <div class="header-right">
+    <span class="simtime">SIM TIME: <b id="simTime">—</b></span>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- PLAYBACK / TIMELINE -->
+  <div class="playbar">
+    <div class="playbar-top">
+      <button class="btn primary" id="playBtn">▶ PLAY</button>
+      <button class="btn" id="resetBtn">↺ RESET</button>
+      <button class="btn jump foul" data-jump="130">▸ Fouling event</button>
+      <button class="btn jump feed" data-jump="282">▸ Feed upset</button>
+      <button class="btn jump flood" data-jump="398">▸ Flooding event</button>
+      <span class="speed">SPEED
+        <select id="speedSel" class="btn" style="text-transform:none;letter-spacing:0">
+          <option value="240">0.25s</option>
+          <option value="120" selected>0.12s</option>
+          <option value="60">0.06s</option>
+          <option value="20">fast</option>
+        </select>
+      </span>
+    </div>
+    <input type="range" min="0" max="479" value="398" class="scrub" id="scrub">
+    <div class="scrub-labels"><span id="tStart">—</span><span style="color:var(--warn)">fouling</span><span style="color:var(--accent)">feed upset</span><span style="color:var(--alarm)">flooding</span><span id="tEnd">now</span></div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-label">Tags Monitored</div><div class="kpi-value mono" id="kTotal">—</div><div class="kpi-meta">instruments + valves</div><div class="kpi-bar"></div></div>
+    <div class="kpi ok"><div class="kpi-label">Healthy</div><div class="kpi-value mono" id="kOk">—</div><div class="kpi-meta">within normal band</div><div class="kpi-bar"></div></div>
+    <div class="kpi warn"><div class="kpi-label">Warning</div><div class="kpi-value mono" id="kWarn">—</div><div class="kpi-meta">outside normal</div><div class="kpi-bar"></div></div>
+    <div class="kpi alarm"><div class="kpi-label">Alarm</div><div class="kpi-value mono" id="kAlarm">—</div><div class="kpi-meta">outside safe limit</div><div class="kpi-bar"></div></div>
+    <div class="kpi"><div class="kpi-label">Active Predictions</div><div class="kpi-value mono" id="kPred">—</div><div class="kpi-meta">early-warning engine</div><div class="kpi-bar"></div></div>
+  </div>
+
+  <div class="grid-main">
+    <!-- TRENDS -->
+    <div class="panel">
+      <div class="panel-head">
+        <div><div class="panel-title">Trends — single &amp; multi-instrument</div><div class="panel-sub">click tiles below to overlay · scalable time axis</div></div>
+        <div class="trend-controls">
+          <div class="win-btns" id="winBtns">
+            <button class="win-btn" data-win="8">1d</button>
+            <button class="win-btn" data-win="24">3d</button>
+            <button class="win-btn active" data-win="56">7d</button>
+            <button class="win-btn" data-win="full">full</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+        <div class="sel-hint">Showing: <span id="selList">—</span> &nbsp; <button class="clear-sel" id="clearSel">clear</button></div>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Active Alerts &amp; Predictions</div><div class="panel-sub" id="alertCount">—</div></div>
+      <div class="panel-body" id="alertsBody"></div>
+    </div>
+  </div>
+
+  <!-- STATUS BOARD -->
+  <div class="panel">
+    <div class="panel-head"><div class="panel-title">Instrument Status Board</div><div class="panel-sub">live state at sim time · click to trend</div></div>
+    <div class="panel-body" id="statusBoard"></div>
+  </div>
+
+</main>
+
+<button id="chatFab">Ask the assistant</button>
+<div id="chatPanel" class="chat-hidden">
+  <div class="chat-head">
+    <div><div class="chat-title">TR-01 Assistant</div><div class="chat-sub">EXPLAINS THE READINGS · DEFERS TO DCS &amp; BOARD FOR ACTION</div></div>
+    <button id="chatClose">&times;</button>
+  </div>
+  <div class="chat-log" id="chatLog"></div>
+  <div class="chat-chips" id="chatChips"></div>
+  <div class="chat-input"><input id="chatInput" placeholder="Ask about status, a tag, or a what-if..."><button id="chatSend">&rarr;</button></div>
+</div>
+
+<script>
+/* ============================================================================
+   TR-01 INSTRUMENTATION MONITORING & EARLY-WARNING SYSTEM
+   ----------------------------------------------------------------------------
+   Single-file demo. All data is SYNTHETIC, generated in-browser with a fixed
+   seed (reproducible). Architecture mirrors a real 4-layer system:
+     DATA      -> tag database + 60 days of 3-hourly readings (seeded scenarios)
+     LOGIC     -> heuristic early-warning engine (excursion / trend / signature)
+     APP       -> status board, alerts, instrument selection
+     VIZ       -> scalable single & multi-instrument trend charts
+   ============================================================================ */
+
+/* ---- 1. TAG DATABASE -------------------------------------------------------
+   Operating values are illustrative mid-pressure hydrocarbon fractionator
+   numbers. normal[] = expected operating band; alarm[] = safe-operating limit.
+   These are the domain parameters a process engineer owns and should defend. */
+const INSTRUMENTS = [
+  // ---- FEED / UPSTREAM ----
+  {tag:'LT-101', loop:'Feed',     desc:'Feed tank level',         unit:'%',    dec:0, base:60,  normal:[35,85],  alarm:[15,95]},
+  {tag:'FT-201', loop:'Feed',     desc:'Feed flow to column',     unit:'m³/h', dec:1, base:50,  normal:[44,56],  alarm:[38,62]},
+  {tag:'FCV-201',loop:'Feed',     desc:'Feed control valve',      unit:'%',    dec:0, base:54,  normal:[30,80],  alarm:[10,95], valve:true},
+  {tag:'TI-301', loop:'Feed',     desc:'Feed temperature',        unit:'°C',   dec:1, base:95,  normal:[88,102], alarm:[80,110]},
+  // ---- COLUMN BODY ----
+  {tag:'TI-302', loop:'Column',   desc:'Top stage temp (tray 5)', unit:'°C',   dec:1, base:76,  normal:[70,82],  alarm:[64,90]},
+  {tag:'TI-303', loop:'Column',   desc:'Upper-mid temp (tray 20)',unit:'°C',   dec:1, base:98,  normal:[90,106], alarm:[82,114]},
+  {tag:'TI-304', loop:'Column',   desc:'Feed-zone temp (tray 40)',unit:'°C',   dec:1, base:120, normal:[112,128],alarm:[104,138]},
+  {tag:'TI-305', loop:'Column',   desc:'Lower temp (tray 55)',    unit:'°C',   dec:1, base:145, normal:[137,153],alarm:[128,162]},
+  {tag:'TI-306', loop:'Column',   desc:'Bottom stage temp (tray 63)',unit:'°C',dec:1, base:162, normal:[154,170],alarm:[146,178]},
+  {tag:'PT-401', loop:'Column',   desc:'Top stage pressure',      unit:'barg', dec:2, base:4.50, normal:[4.35,4.65],alarm:[4.20,4.80]},
+  {tag:'PT-402', loop:'Column',   desc:'Feed-zone pressure',      unit:'barg', dec:2, base:4.70, normal:[4.50,4.90],alarm:[4.35,5.05]},
+  {tag:'PT-403', loop:'Column',   desc:'Bottom pressure',         unit:'barg', dec:2, base:4.90, normal:[4.70,5.10],alarm:[4.55,5.40]},
+  {tag:'dP-401', loop:'Column',   desc:'Column ΔP (PT403−PT401)', unit:'bar',  dec:3, base:0.40, normal:[0.30,0.55],alarm:[0.20,0.75], derived:true},
+  // ---- REBOILER ----
+  {tag:'FT-202', loop:'Reboiler', desc:'Reboiler steam flow',     unit:'t/h',  dec:2, base:8.0, normal:[7.0,9.0], alarm:[6.0,10.5]},
+  {tag:'FCV-202',loop:'Reboiler', desc:'Steam control valve',     unit:'%',    dec:0, base:60,  normal:[35,85],  alarm:[15,98], valve:true},
+  {tag:'PT-404', loop:'Reboiler', desc:'Steam header pressure',   unit:'barg', dec:1, base:12.0,normal:[11.3,12.7],alarm:[10.5,13.5]},
+  {tag:'TI-307', loop:'Reboiler', desc:'Steam temperature',       unit:'°C',   dec:1, base:190, normal:[185,195],alarm:[178,201]},
+  {tag:'LT-103', loop:'Reboiler', desc:'Condensate pot level',    unit:'%',    dec:0, base:50,  normal:[35,65],  alarm:[20,80]},
+  // ---- BOTTOMS ----
+  {tag:'LT-102', loop:'Bottoms',  desc:'Column sump level',       unit:'%',    dec:0, base:50,  normal:[35,65],  alarm:[20,80]},
+  {tag:'LCV-101',loop:'Bottoms',  desc:'Bottoms valve (←LT-102)', unit:'%',    dec:0, base:50,  normal:[25,80],  alarm:[8,95], valve:true},
+  {tag:'FT-203', loop:'Bottoms',  desc:'Bottoms product flow',    unit:'m³/h', dec:1, base:30,  normal:[25,35],  alarm:[18,42]},
+  {tag:'TI-308', loop:'Bottoms',  desc:'Bottoms temperature',     unit:'°C',   dec:1, base:165, normal:[158,172],alarm:[150,180]},
+  // ---- OVERHEAD ----
+  {tag:'TI-309', loop:'Overhead', desc:'Ovhd vapour temp',        unit:'°C',   dec:1, base:75,  normal:[69,81],  alarm:[62,88]},
+  {tag:'PT-405', loop:'Overhead', desc:'Overhead pressure',       unit:'barg', dec:2, base:4.45, normal:[4.30,4.60],alarm:[4.10,4.80]},
+  {tag:'TI-310', loop:'Overhead', desc:'Condenser outlet temp',   unit:'°C',   dec:1, base:45,  normal:[40,52],  alarm:[33,60]},
+  {tag:'LT-104', loop:'Overhead', desc:'Reflux drum level',       unit:'%',    dec:0, base:50,  normal:[35,65],  alarm:[20,85]},
+  {tag:'LCV-102',loop:'Overhead', desc:'Reflux valve (←LT-104)',  unit:'%',    dec:0, base:55,  normal:[30,85],  alarm:[10,98], valve:true},
+  {tag:'TI-311', loop:'Overhead', desc:'Reflux drum temp',        unit:'°C',   dec:1, base:44,  normal:[39,50],  alarm:[32,57]},
+  {tag:'PT-406', loop:'Overhead', desc:'Reflux drum pressure',    unit:'barg', dec:2, base:4.30, normal:[4.15,4.45],alarm:[4.00,4.65]},
+  {tag:'FT-204', loop:'Overhead', desc:'Reflux flow',             unit:'m³/h', dec:1, base:35,  normal:[30,40],  alarm:[24,46]},
+  // ---- VENT / PURGE ----
+  {tag:'FT-205', loop:'Vent',     desc:'Vent purge flow',         unit:'Nm³/h',dec:0, base:200, normal:[150,260],alarm:[100,320]},
+  {tag:'PCV-401',loop:'Vent',     desc:'Purge valve (←PT-406)',   unit:'%',    dec:0, base:40,  normal:[15,75],  alarm:[5,95], valve:true},
+  {tag:'PT-407', loop:'Vent',     desc:'Vent line pressure',      unit:'barg', dec:2, base:4.20, normal:[4.05,4.35],alarm:[3.90,4.55]},
+];
+const LOOPS = ['Feed','Column','Reboiler','Bottoms','Overhead','Vent'];
+const byTag = {}; INSTRUMENTS.forEach(i=>byTag[i.tag]=i);
+const inst = t => byTag[t];
+
+/* ---- 2. TIME BASE ---------------------------------------------------------- */
+const N = 480;                       // 60 days × 8 readings/day
+const STEP_H = 3;                    // 3-hourly
+const END = new Date('2026-06-15T00:00:00');
+const TS = []; for(let i=0;i<N;i++){ TS.push(new Date(END.getTime() - (N-1-i)*STEP_H*3600*1000)); }
+const fmt = d => d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+const fmtDay = d => d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+
+/* ---- 3. SEEDED RNG + HELPERS ----------------------------------------------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const rng = mulberry32(20260615);
+const noise = a => (rng()+rng()+rng()+rng()-2)/2 * a;          // ~gaussian
+const ramp  = (i,a,b,from,to)=> i<=a?from : i>=b?to : from+(to-from)*(i-a)/(b-a);
+// trapezoid event: rises a→p1, holds p1→p2, falls p2→b
+const evt   = (i,a,p1,p2,b,amp)=> (i<a||i>b)?0 : i<p1?amp*(i-a)/(p1-a) : i<=p2?amp : amp*(b-i)/(b-p2);
+const win   = (i,a,b)=> (i>=a&&i<=b)?1:0;
+
+/* ---- 4. DATA GENERATION (with seeded scenarios A / D / B) -------------------
+   Scenario windows (index, 8 readings/day):
+     A  Reboiler fouling : day 10–27  (slow creep, then cleaning/recovery)
+     D  Feed disturbance : day 32–38  (instability/hunting)
+     B  Column flooding  : day 47–53  (sharp ΔP rise + level divergence)        */
+const R = {}; INSTRUMENTS.forEach(i=>R[i.tag]=new Array(N));
+
+for(let i=0;i<N;i++){
+  const day = (Math.sin(i*Math.PI/4));   // ~1-day cycle (period 8)
+
+  // --- baseline measurements ---
+  let LT101=60+noise(2)+3*Math.sin(i*0.04);
+  let FT201=50+noise(0.4)+0.6*day;
+  let TI301=95+noise(0.6)+0.8*day;
+  let TI302=76+noise(0.5)+0.5*day;
+  let TI303=98+noise(0.6);
+  let TI304=120+noise(0.7);
+  let TI305=145+noise(0.7);
+  let TI306=162+noise(0.8);
+  let PT401=4.50+noise(0.015);
+  let PT402=4.70+noise(0.02);
+  let PT403=4.90+noise(0.02);
+  let FT202=8.0+noise(0.10)+0.05*day;
+  let PT404=12.0+noise(0.1);
+  let TI307=190+noise(0.6);
+  let LT103=50+noise(2);
+  let LT102=50+noise(2);
+  let FT203=30+noise(0.4);
+  let TI308=165+noise(0.7);
+  let TI309=75+noise(0.5)+0.4*day;
+  let PT405=4.45+noise(0.015);
+  let TI310=45+noise(0.7);
+  let LT104=50+noise(2);
+  let TI311=44+noise(0.6);
+  let PT406=4.30+noise(0.015);
+  let FT204=35+noise(0.5);
+  let FT205=200+noise(8);
+  let PT407=4.20+noise(0.015);
+
+  // --- Scenario A: reboiler fouling (slow) ---
+  // heat-transfer degrades -> controller opens steam to hold bottoms temp ->
+  // separation worsens -> column ΔP climbs. Cleaning at ~day27 recovers it.
+  const A = evt(i, 80,150,196,214, 1);     // 0..1 envelope
+  FT202 += A*1.7;                           // steam creeps up
+  PT403 += A*0.24;                          // bottoms pressure / ΔP rises
+  TI308 += -A*1.5;                          // bottoms sags slightly despite steam
+  TI306 += -A*1.0;
+
+  // --- Scenario D: feed disturbance (instability) ---
+  const D = win(i,256,306);
+  const osc = Math.sin(i*1.7)+0.5*Math.sin(i*0.9);
+  FT201 += D*(9*osc + noise(2));            // feed hunts beyond normal band
+  LT101 += D*(22*Math.sin(i*0.6) + noise(6));
+  TI304 += D*(10*osc + noise(2));
+  TI303 += D*(5*osc);
+  LT102 += D*(12*Math.sin(i*1.3));          // downstream hunting
+  LT104 += D*(10*Math.sin(i*1.1+1));
+  FT203 += D*(5*osc);
+
+  // --- Scenario B: column flooding (sharp) ---
+  // entrainment/holdup runs away: ΔP spikes, liquid backs up in reflux drum,
+  // sump drains, overhead warms. Intervention at ~day52 recovers it.
+  const B = evt(i, 376,400,410,426, 1);
+  PT403 += B*0.72;                          // ΔP rises sharply
+  LT104 += B*36;                            // reflux drum fills
+  LT102 += -B*30;                           // sump drains
+  TI309 += B*12 + B*noise(1.5);             // overhead warms / swings
+  PT405 += B*0.30;
+  PT406 += B*0.16;
+  FT204 += B*5;                             // reflux pushed up trying to cope
+  TI302 += B*7;
+
+  // --- derived control-valve outputs (simple loop response) ---
+  let FCV201 = 54 + (FT201-50)*1.4 + noise(1.5);
+  let FCV202 = 60 + (FT202-8.0)*13 + noise(1.2);     // opens during fouling
+  let LCV101 = 50 + (LT102-50)*1.15 + noise(1.2);    // closes as sump drains (flood)
+  let LCV102 = 55 + (LT104-50)*1.15 + noise(1.2);    // opens as drum fills (flood)
+  let PCV401 = 40 + (PT406-4.30)*130 + noise(1.5);
+  const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+
+  R['LT-101'][i]=LT101; R['FT-201'][i]=FT201; R['FCV-201'][i]=clamp(FCV201,0,100); R['TI-301'][i]=TI301;
+  R['TI-302'][i]=TI302; R['TI-303'][i]=TI303; R['TI-304'][i]=TI304; R['TI-305'][i]=TI305; R['TI-306'][i]=TI306;
+  R['PT-401'][i]=PT401; R['PT-402'][i]=PT402; R['PT-403'][i]=PT403;
+  R['dP-401'][i]=PT403-PT401;
+  R['FT-202'][i]=FT202; R['FCV-202'][i]=clamp(FCV202,0,100); R['PT-404'][i]=PT404; R['TI-307'][i]=TI307; R['LT-103'][i]=LT103;
+  R['LT-102'][i]=LT102; R['LCV-101'][i]=clamp(LCV101,0,100); R['FT-203'][i]=FT203; R['TI-308'][i]=TI308;
+  R['TI-309'][i]=TI309; R['PT-405'][i]=PT405; R['TI-310'][i]=TI310; R['LT-104'][i]=LT104; R['LCV-102'][i]=clamp(LCV102,0,100);
+  R['TI-311'][i]=TI311; R['PT-406'][i]=PT406; R['FT-204'][i]=FT204;
+  R['FT-205'][i]=FT205; R['PCV-401'][i]=clamp(PCV401,0,100); R['PT-407'][i]=PT407;
+}
+
+/* ---- 5. ANALYSIS HELPERS --------------------------------------------------- */
+function slope(arr,idx,n){            // least-squares slope per reading (3h)
+  const s=Math.max(0,idx-n+1), m=idx-s+1; if(m<3)return 0;
+  let sx=0,sy=0,sxy=0,sxx=0;
+  for(let k=0;k<m;k++){const x=k,y=arr[s+k];sx+=x;sy+=y;sxy+=x*y;sxx+=x*x;}
+  return (m*sxy-sx*sy)/(m*sxx-sx*sx);
+}
+function stdev(arr,idx,n){
+  const s=Math.max(0,idx-n+1), m=idx-s+1; let mu=0;
+  for(let k=s;k<=idx;k++)mu+=arr[k]; mu/=m;
+  let v=0; for(let k=s;k<=idx;k++)v+=(arr[k]-mu)**2; return Math.sqrt(v/m);
+}
+function stateOf(tag,idx){
+  const I=inst(tag), v=R[tag][idx];
+  if(v<I.alarm[0]||v>I.alarm[1])return 'alarm';
+  if(v<I.normal[0]||v>I.normal[1])return 'warn';
+  return 'ok';
+}
+const hrsToText = h => h<=0?'now' : h<48?Math.round(h)+' h' : (h/24).toFixed(1)+' d';
+
+/* ---- 6. EARLY-WARNING ENGINE (heuristic signature detectors) ----------------
+   Each detector encodes a known cause->effect chain from process knowledge.
+   It fires DURING the developing phase and extrapolates the trend to the limit
+   to give a pre-emptive ETA — i.e. it warns before the consequence arrives.   */
+function detect(idx){
+  const out=[];
+
+  // --- A: reboiler fouling ---
+  const sSteam=slope(R['FT-202'],idx,16), sDP=slope(R['dP-401'],idx,16);
+  const steam=R['FT-202'][idx], dp=R['dP-401'][idx];
+  if((sSteam>0.006 && sDP>0.0008 && steam>8.3) || (steam>8.9 && dp>0.52)){
+    const eta = sSteam>0.001 ? (10.5-steam)/sSteam*STEP_H : 999;
+    const conf = Math.min(95, 45 + (steam-8)*22 + (dp-0.4)*120);
+    out.push({id:'A', sev: steam>9.4||dp>0.62?'alarm':'warn',
+      name:'Reboiler fouling / heat-transfer decline',
+      sig:['Steam flow FT-202 trending up to hold duty','Column ΔP rising as separation degrades','Bottoms temp TI-308 sagging vs steam input'],
+      pred:'Progressive duty loss → off-spec bottoms; approach to ΔP limit if untreated.',
+      eta: eta<200?('Steam at max in ~'+hrsToText(eta)):null,
+      tags:['FT-202','dP-401','TI-308','FCV-202'],
+      mit:'Confirm fouling vs FT-202/TI-308 divergence; plan reboiler cleaning; consider temporary feed-rate cut to hold spec.',
+      conf:Math.round(conf)});
+  }
+
+  // --- D: feed disturbance / upstream instability ---
+  const vFeed=stdev(R['FT-201'],idx,12), vTank=stdev(R['LT-101'],idx,12), vSump=stdev(R['LT-102'],idx,12);
+  if(vFeed>3.2 && vTank>8){
+    const conf=Math.min(95,40+vFeed*5+ (vSump>5?15:0));
+    out.push({id:'D', sev: vFeed>6?'alarm':'warn',
+      name:'Feed-end instability',
+      sig:['Feed flow FT-201 oscillating beyond normal band','Feed tank level LT-101 swinging','Downstream levels hunting'+(vSump>5?' (sump LT-102)':'')],
+      pred:'Disturbance propagating into column → profile shift, level hunting, possible spec wander.',
+      eta:null,
+      tags:['FT-201','LT-101','TI-304','LT-102'],
+      mit:'Check feed pump/tank LT-101 & suction; verify FCV-201 response; stabilise feed before touching reboiler.',
+      conf:Math.round(conf)});
+  }
+
+  // --- B: column flooding ---
+  const sDPf=slope(R['dP-401'],idx,8), sL104=slope(R['LT-104'],idx,8), sL102=slope(R['LT-102'],idx,8);
+  if((sDPf>0.010 && sL104>0.6 && sL102<-0.5) || dp>0.62){
+    const flooding = dp>0.75;
+    const eta = sDPf>0.001 ? (0.75-dp)/sDPf*STEP_H : 999;
+    const conf=Math.min(98, 55 + (dp-0.45)*150 + sDPf*400);
+    out.push({id:'B', sev: flooding?'alarm':'warn',
+      name: flooding?'Column flooding IN PROGRESS':'Flooding signature developing',
+      sig:['Column ΔP rising sharply','Reflux drum LT-104 filling','Column sump LT-102 draining','Overhead temp TI-309 swinging up'],
+      pred: flooding?'Loss of separation / liquid carryover overhead.':'Trajectory toward flood limit — separation loss imminent.',
+      eta: (!flooding && eta<120)?('Reaches flood ΔP in ~'+hrsToText(eta)):null,
+      tags:['dP-401','LT-104','LT-102','TI-309','FCV-202'],
+      mit:'Reduce reboiler duty FCV-202; cut feed FT-201; verify reflux; watch ΔP for recovery before resuming rates.',
+      conf:Math.round(conf)});
+  }
+  return out;
+}
+
+/* ---- 7. STATE ---- */
+let cur=398, selected=['dP-401','LT-104','LT-102'], trendWin=56, playing=false, timer=null, speed=120, chart=null;
+
+/* ---- 8. RENDER ---- */
+function render(){
+  document.getElementById('simTime').textContent = fmt(TS[cur]);
+  document.getElementById('tStart').textContent = fmtDay(TS[0]);
+  document.getElementById('scrub').value = cur;
+
+  // states
+  let ok=0,warn=0,alarm=0;
+  INSTRUMENTS.forEach(I=>{const s=stateOf(I.tag,cur); if(s==='ok')ok++; else if(s==='warn')warn++; else alarm++;});
+  const alerts=detect(cur);
+  document.getElementById('kTotal').textContent=INSTRUMENTS.length;
+  document.getElementById('kOk').textContent=ok;
+  document.getElementById('kWarn').textContent=warn;
+  document.getElementById('kAlarm').textContent=alarm;
+  document.getElementById('kPred').textContent=alerts.length;
+
+  renderAlerts(alerts);
+  renderBoard();
+  renderTrend();
+}
+
+function renderAlerts(alerts){
+  const el=document.getElementById('alertsBody');
+  document.getElementById('alertCount').textContent = alerts.length+' active';
+  if(!alerts.length){ el.innerHTML='<div class="no-alerts"><span class="ok-mark">✓</span>All systems within normal operating envelope.<br>No active predictions at this time.</div>'; return; }
+  el.innerHTML = alerts.map(a=>`
+    <div class="alert ${a.sev}">
+      <div class="alert-head"><span class="alert-name">${a.name}</span><span class="alert-sev ${a.sev}">${a.sev==='alarm'?'Alarm':'Warning'} · ${a.conf}%</span></div>
+      ${a.eta?`<div class="alert-eta">⏱ ${a.eta}</div>`:''}
+      <div class="alert-row"><span class="lab">Signature</span>${a.sig.map(s=>'• '+s).join('<br>')}</div>
+      <div class="alert-row"><span class="lab">Predicted consequence</span>${a.pred}</div>
+      <div class="alert-row"><span class="lab">Suggested mitigation</span>${a.mit}</div>
+      <div class="alert-row"><span class="lab">Instruments</span><span class="alert-tags">${a.tags.map(t=>`<span class="tagchip">${t}</span>`).join('')}</span></div>
+    </div>`).join('');
+}
+
+function renderBoard(){
+  const el=document.getElementById('statusBoard');
+  el.innerHTML = LOOPS.map(loop=>{
+    const tiles=INSTRUMENTS.filter(I=>I.loop===loop).map(I=>{
+      const s=stateOf(I.tag,cur), v=R[I.tag][cur], sl=slope(R[I.tag],cur,6);
+      const arrow = sl>(Math.abs(I.base)*0.0006+1e-4)?'▲':sl<-(Math.abs(I.base)*0.0006+1e-4)?'▼':'▬';
+      const aCol = arrow==='▲'?'var(--alarm)':arrow==='▼'?'var(--ok)':'var(--subtle)';
+      const isSel=selected.includes(I.tag);
+      return `<div class="tile ${s} ${isSel?'sel':''}" data-tag="${I.tag}">
+        <span class="tile-dot"></span>
+        <div class="tile-tag">${I.tag}</div>
+        <div class="tile-desc">${I.desc}</div>
+        <div><span class="tile-val">${v.toFixed(I.dec)}</span> <span class="tile-unit">${I.unit}</span><span class="trend-arrow" style="color:${aCol}">${arrow}</span></div>
+      </div>`;
+    }).join('');
+    return `<div class="loop-group"><div class="loop-name">${loop} circuit</div><div class="tiles">${tiles}</div></div>`;
+  }).join('');
+  el.querySelectorAll('.tile').forEach(t=>t.onclick=()=>toggleSel(t.dataset.tag));
+}
+
+const PALETTE=['#1e293b','#b45309','#15803d','#b91c1c','#0e7490','#7c3aed','#a16207','#be123c'];
+function renderTrend(){
+  const start = trendWin==='full'?0:Math.max(0,cur-trendWin+1);
+  const labels = TS.slice(start,cur+1).map(fmt);
+  document.getElementById('selList').textContent = selected.length?selected.join(', '):'(none — click an instrument tile)';
+
+  const units=[...new Set(selected.map(t=>inst(t).unit))].slice(0,3);
+  const scales={ x:{ ticks:{maxTicksLimit:8,autoSkip:true,font:{family:'IBM Plex Mono',size:9},color:'#78716c'}, grid:{display:false} } };
+  units.forEach((u,k)=>{ scales['y'+k]={ position:k===0?'left':'right', title:{display:true,text:u,font:{family:'IBM Plex Mono',size:10},color:'#57534e'}, ticks:{font:{family:'IBM Plex Mono',size:9},color:'#78716c'}, grid:{color:k===0?'#f0efed':'transparent'} }; });
+
+  const datasets = selected.map((t,ti)=>{
+    const I=inst(t); const c=PALETTE[ti%PALETTE.length];
+    return { label:`${t} (${I.unit})`, data:R[t].slice(start,cur+1), yAxisID:'y'+units.indexOf(I.unit),
+      borderColor:c, backgroundColor:c, borderWidth:1.6, pointRadius:0, tension:0.15 };
+  });
+
+  if(chart)chart.destroy();
+  chart=new Chart(document.getElementById('trendChart'),{
+    type:'line', data:{labels,datasets},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      plugins:{ legend:{position:'bottom',labels:{font:{family:'IBM Plex Mono',size:10},boxWidth:10,padding:12,usePointStyle:true}},
+        tooltip:{titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:11}} },
+      scales }
+  });
+}
+
+function toggleSel(tag){
+  const k=selected.indexOf(tag);
+  if(k>=0)selected.splice(k,1); else { if(selected.length>=5){selected.shift();} selected.push(tag); }
+  renderBoard(); renderTrend();
+}
+
+/* ---- 9. PLAYBACK ---- */
+function play(){ if(playing)return; if(cur>=N-1)cur=0; playing=true; document.getElementById('playBtn').textContent='❚❚ PAUSE';
+  timer=setInterval(()=>{ cur++; if(cur>=N-1){cur=N-1;pause();} render(); }, speed); }
+function pause(){ playing=false; clearInterval(timer); document.getElementById('playBtn').textContent='▶ PLAY'; }
+
+/* ---- 10. WIRING ---- */
+document.getElementById('playBtn').onclick=()=>playing?pause():play();
+document.getElementById('resetBtn').onclick=()=>{pause();cur=0;render();};
+document.getElementById('scrub').oninput=e=>{pause();cur=+e.target.value;render();};
+document.getElementById('speedSel').onchange=e=>{speed=+e.target.value; if(playing){pause();play();}};
+document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>{pause();cur=+b.dataset.jump;render();});
+document.querySelectorAll('.win-btn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.win-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+  trendWin = b.dataset.win==='full'?'full':+b.dataset.win; renderTrend();
+});
+document.getElementById('clearSel').onclick=()=>{selected=[];renderBoard();renderTrend();};
+
+/* ---- guided assistant (scripted; reads live state; never directs control) ---- */
+function trAnswer(q){
+  const s=q.toLowerCase(), idx=cur;
+  if(/should (i|we)|what (do|should) (i|we)|take action|shut ?down|\btrip\b|open the|close the|adjust|change.*set ?point|setpoint|control (move|action)|fix (it|this)|increase the|decrease the|reduce (the )?(feed|steam|reflux|duty)/.test(s))
+    return "I don't recommend control actions \u2014 this layer is for foresight and stewardship, not control. Real-time moves belong to the DCS, the board operator, and the Section In-Charge, who hold the live alarms and the authority. I can tell you what the trends <b>suggest</b> so you can plan; the control room decides what to <b>do</b>.";
+  const ALIAS={'delta p':'dP-401','deltap':'dP-401',' dp':'dP-401','differential pressure':'dP-401','pressure drop':'dP-401','steam':'FT-202','feed flow':'FT-201','feed zone':'TI-304','feed temp':'TI-304','reflux drum level':'LT-104','reflux drum':'LT-104','reflux':'FT-204','sump':'LT-102','bottoms temp':'TI-308','bottoms':'FT-203','overhead temp':'TI-309','overhead':'TI-309','feed tank':'LT-101','column dp':'dP-401'};
+  let tag=null;
+  for(const I of INSTRUMENTS){if(s.includes(I.tag.toLowerCase())){tag=I.tag;break;}}
+  if(!tag){for(const k in ALIAS){if(s.includes(k)){tag=ALIAS[k];break;}}}
+  if(!tag && /\bfeed\b/.test(s)) tag='FT-201';
+  const dir=/dip|drop|fall|decreas|lower|down|sag/.test(s)?'down':/ris|climb|increas|\bup\b|higher|spike|jump|surg/.test(s)?'up':null;
+
+  const REL={
+    'dP-401':{up:"A rising column \u0394P is the classic <b>flooding</b> signature. Roughly in sequence, expect the reflux drum (LT-104) to fill, the sump (LT-102) to drain, and overhead temp (TI-309) to climb. The consequence to watch is <b>loss of separation / liquid carryover overhead</b>. False-alarm check: if \u0394P climbs but LT-104 and LT-102 stay flat, suspect the instrument rather than a real flood.",down:"A falling \u0394P usually means reduced vapour traffic \u2014 check whether feed (FT-201) or reboiler steam (FT-202) has dropped."},
+    'FT-202':{up:"Steam creeping up to hold the same bottoms temperature is a <b>reboiler fouling</b> fingerprint. Cross-check column \u0394P (dP-401): if \u0394P is also creeping up, fouling is the likely story and separation is slowly degrading. If steam is up but \u0394P and bottoms temp (TI-308) are steady, it may just be higher throughput.",down:"Less steam means less reboil duty \u2014 bottoms temp (TI-308) and separation will fall; lights may slip into the bottoms."},
+    'TI-308':{up:"Hotter bottoms usually means more reboil \u2014 confirm against steam flow (FT-202). A rise without more steam points to a feed-composition or pressure change.",down:"Cooler bottoms while steam holds or rises is a fouling tell \u2014 the reboiler working harder for less effect. Watch dP-401."},
+    'TI-304':{up:"Feed-zone temperature shifting is often the first sign of a <b>feed disturbance</b>. Watch feed flow (FT-201) and tank level (LT-101) for instability, and expect downstream levels (LT-102, LT-104) to start hunting.",down:"Same root \u2014 a feed-end disturbance. Stabilise the feed before reacting to anything downstream."},
+    'FT-201':{up:"A feed surge stresses the whole column \u2014 temperatures and levels will chase it. If FT-201 is <b>swinging</b> rather than trending, suspect the feed pump or tank (LT-101): a <b>feed disturbance</b>.",down:"A feed drop unloads the column; levels and the reboiler loop react. Check the feed pump and FCV-201 response."},
+    'LT-104':{up:"A filling reflux drum can mean <b>flooding</b> (liquid backing up) \u2014 cross-check \u0394P (dP-401) and the sump (LT-102). If \u0394P is spiking and the sump is draining at the same time, it's a real flood, not a level-control glitch.",down:"A draining drum points to a reflux/condensing imbalance \u2014 check reflux flow (FT-204) and condenser temps."},
+    'LT-102':{up:"A filling sump \u2014 check the bottoms draw (FT-203 / LCV-101).",down:"A draining sump <b>together with</b> a filling reflux drum and rising \u0394P is the flooding fingerprint. Alone, it's more likely a bottoms-draw or level-control issue."},
+    'TI-309':{up:"Overhead warming can mean heavier components carrying up the column \u2014 degrading separation, often alongside rising \u0394P (flooding) or lost condensing. Check dP-401 and condenser outlet (TI-310).",down:"Cooler overhead usually means lighter top product or lower reboil \u2014 check reboiler duty."},
+    'LT-101':{up:"Feed tank filling \u2014 usually upstream supply; just confirm feed flow (FT-201) stays steady.",down:"A draining or swinging feed tank can starve and destabilise the feed pump \u2014 a common root of a <b>feed disturbance</b>."},
+    'PT-403':{up:"Rising bottom pressure lifts column \u0394P \u2014 see the flooding/fouling signatures via dP-401.",down:"Falling bottom pressure \u2014 check pressure control and vapour load."},
+  };
+  if(tag && REL[tag] && (dir || /what (else|other|happen|could|might|next)|consequence|knock|cascade|affect|simultaneous|along with|related|lead to/.test(s))){
+    const d=dir||'up';
+    return `<b>If ${tag} ${d==='up'?'rises':'dips'}:</b> ${REL[tag][d]}`;
+  }
+  if(/false|faulty|instrument (error|fault|issue|problem)|real (problem|trend|issue)|trust|reliable|genuine|sensor|actually (happening|wrong)/.test(s)){
+    if(tag){
+      const I=inst(tag), st=statusOf(tag,idx), mates=INSTRUMENTS.filter(x=>x.loop===I.loop&&x.tag!==tag), off=mates.filter(x=>statusOf(x.tag,idx)!=='ok').length;
+      if(st==='ok') return `Right now <b>${tag}</b> is reading within its normal band, so nothing to question at this moment. As a rule: a single tag going out of range while its physically-connected neighbours stay normal leans toward an <b>instrument fault</b>; the whole signature moving together points to a <b>real process trend</b>.`;
+      return `<b>${tag}</b> is currently ${st==='alarm'?'in alarm':'in warning'}. Of its loop-mates, <b>${off} of ${mates.length}</b> are also disturbed. ${off>=1?"Because related instruments are moving with it, this looks more like a <b>real process trend</b> than a bad sensor.":"Since its related instruments look normal, this could be an <b>instrument issue</b> \u2014 worth a field check before treating it as a process upset."} Rule of thumb: <b>one tag alone \u2192 suspect the instrument; the signature moving together \u2192 suspect the process.</b>`;
+    }
+    return "The quick test for any reading: <b>is the suspicious tag moving alone, or are its physically-related tags moving too?</b> One tag out of line while its neighbours sit still usually means an instrument fault. The whole signature drifting together means a real process change. Name a tag (e.g. \u201cis TI-308 a false reading?\u201d) and I'll check it against its loop-mates right now.";
+  }
+  if(/odds|chance|likel|confiden|probab|how sure/.test(s)){
+    const al=detect(idx);
+    if(!al.length) return "No early-warning signatures are active at this point in the timeline, so there's nothing with a meaningful probability attached. Scrub to a flagged event and ask again.";
+    return al.map(a=>`<b>${a.name}</b> \u2014 engine confidence <b>${a.conf}%</b>, from how many parts of its signature are lining up${a.eta?`; on current trend, ${a.eta.toLowerCase()}`:''}.`).join('<br><br>');
+  }
+  if(/status|summary|what.?s (wrong|happening|going on)|overview|anything wrong|current state/.test(s)){
+    const al=detect(idx); let warn=0,alarm=0; INSTRUMENTS.forEach(I=>{const st=statusOf(I.tag,idx);if(st==='warn')warn++;else if(st==='alarm')alarm++;});
+    let r=`At <b>${fmt(TS[idx])}</b>: <b>${alarm}</b> tag(s) in alarm, <b>${warn}</b> in warning. `;
+    r+=al.length?`Active early-warning signature(s): `+al.map(a=>`<b>${a.name}</b> (${a.conf}%)`).join(', ')+'.':'No developing failure signatures flagged.';
+    return r;
+  }
+  if(tag && /what (is|are|does)|explain|tell me about|info|detail|reading/.test(s)){
+    const I=inst(tag), v=R[tag][idx], st=statusOf(tag,idx);
+    return `<b>${tag} \u2014 ${I.desc}</b> (${I.loop} circuit). Reading now: <b>${v.toFixed(I.dec)} ${I.unit}</b>, currently <b>${st==='ok'?'normal':st==='warn'?'in warning':'in alarm'}</b>. Normal band: ${I.normal[0]}\u2013${I.normal[1]} ${I.unit}.`;
+  }
+  if(/next shift|watch (for|out)|hand ?over|keep an eye|developing/.test(s)){
+    const warns=INSTRUMENTS.filter(I=>statusOf(I.tag,idx)==='warn'), al=detect(idx);
+    if(!warns.length && !al.length) return "Everything's within band and nothing is trending toward trouble here \u2014 a clean handover.";
+    let r=al.length?`Flag for the next shift:<br>`+al.map(a=>`\u2022 <b>${a.name}</b> \u2014 ${a.mit}`).join('<br>'):'';
+    if(warns.length) r+=`${r?'<br><br>':''}Tags in warning to keep an eye on: <b>${warns.map(I=>I.tag).join(', ')}</b>.`;
+    return r;
+  }
+  if(/\u0394p|delta ?p|differential pressure|what is dp|column pressure drop/.test(s)) return "<b>Column \u0394P</b> (dP-401) is the pressure difference between the bottom and top of the column \u2014 a read on how much vapour traffic the trays are handling. Steady is healthy; a rising \u0394P often signals flooding or fouling; a falling \u0394P means reduced loading.";
+  return "I explain the readings and what the trends suggest. Try: <i>\u201cwhat's the status?\u201d</i>, <i>\u201cif dP-401 rises, what else could happen?\u201d</i>, <i>\u201cis TI-308 a false reading?\u201d</i>, or <i>\u201cwhat should the next shift watch?\u201d</i> I describe what the data shows \u2014 control actions stay with the DCS and board.";
+}
+function setupChatTR(){
+  const log=document.getElementById('chatLog'), input=document.getElementById('chatInput');
+  const chips=["What's the status?","If dP-401 rises, what else could happen?","Is TI-308 a false reading?","What should the next shift watch?"];
+  const add=(role,html)=>{const d=document.createElement('div');d.className='msg '+role;d.innerHTML=html;log.appendChild(d);log.scrollTop=log.scrollHeight;};
+  const ask=q=>{add('user',q.replace(/</g,'&lt;'));setTimeout(()=>add('bot',trAnswer(q)),130);};
+  document.getElementById('chatChips').innerHTML=chips.map(c=>`<button class="chip-q">${c}</button>`).join('');
+  document.querySelectorAll('.chip-q').forEach(b=>b.onclick=()=>ask(b.textContent));
+  const send=()=>{const v=input.value.trim();if(!v)return;input.value='';ask(v);};
+  document.getElementById('chatSend').onclick=send;
+  input.onkeydown=e=>{if(e.key==='Enter')send();};
+  document.getElementById('chatFab').onclick=()=>{document.getElementById('chatPanel').classList.remove('chat-hidden');document.getElementById('chatFab').style.display='none';if(!log.children.length)add('bot',"Hi \u2014 I'm a stewardship assistant for TR-01. I explain the readings and what the trends suggest, and I always defer to the DCS and board for any real-time action. Ask me about the current status, a tag, or a what-if.");};
+  document.getElementById('chatClose').onclick=()=>{document.getElementById('chatPanel').classList.add('chat-hidden');document.getElementById('chatFab').style.display='flex';};
+}
+
+render();
+setupChatTR();
+</script>
+</body>
+</html>

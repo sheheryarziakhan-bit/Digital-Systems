@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sheheryar Zia Khan — Operational Systems Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1e293b; --ink-2:#0f172a;
+  --paper:#f4f4f3; --surface:#ffffff; --surface-2:#fafaf9;
+  --border:#e7e5e4; --border-2:#d6d3d1;
+  --text:#1c1917; --muted:#57534e; --subtle:#78716c;
+  --accent:#b45309;
+  --ok:#15803d; --warn:#b45309; --alarm:#b91c1c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'IBM Plex Sans',system-ui,sans-serif;color:var(--text);background:var(--paper);line-height:1.55;-webkit-font-smoothing:antialiased}
+.mono{font-family:'IBM Plex Mono',monospace;font-feature-settings:"tnum" 1}
+a{color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 28px}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--accent)}
+
+/* ---------- HERO ---------- */
+.hero{background:var(--ink);color:#f1f5f9;padding:24px 0 0;border-bottom:3px solid var(--accent);overflow:hidden}
+.nav{display:flex;justify-content:space-between;align-items:center;padding-bottom:48px}
+.nav-name{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:1px;color:#cbd5e1}
+.nav-name b{color:#fff}
+.nav-links{display:flex;gap:22px;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.5px}
+.nav-links a{color:#94a3b8;text-decoration:none;transition:.15s}
+.nav-links a:hover{color:#fff}
+.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center;padding-bottom:56px}
+.hero h1{font-size:clamp(30px,4.4vw,50px);font-weight:600;line-height:1.08;letter-spacing:-1px;margin:18px 0 22px;color:#fff}
+.hero h1 .em{color:var(--accent)}
+.hero-sub{font-size:17px;color:#cbd5e1;max-width:46ch;font-weight:300}
+.hero-cta{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:13px 22px;border-radius:4px;text-decoration:none;display:inline-block;transition:.15s;cursor:pointer;border:1px solid transparent}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#c2670f}
+.btn-ghost{border-color:#475569;color:#e2e8f0}
+.btn-ghost:hover{border-color:#94a3b8;background:rgba(255,255,255,.04)}
+.trust{border-top:1px solid #334155;display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.trust-item{padding:20px 0}
+.trust-num{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:500;color:#fff;line-height:1}
+.trust-lab{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:#94a3b8;margin-top:7px}
+
+/* hero signature: predictive trend motif */
+.motif{width:100%;height:auto}
+.motif .grid-line{stroke:#334155;stroke-width:1}
+.motif .band{fill:rgba(21,128,61,.14)}
+.motif .limit{stroke:var(--alarm);stroke-width:1.5;stroke-dasharray:5 4}
+.motif .trend{fill:none;stroke:#fbbf24;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.motif .lab{font-family:'IBM Plex Mono',monospace;fill:#94a3b8;font-size:10px;letter-spacing:1px}
+.motif .lab-alarm{fill:#f87171}
+.motif .warn-line{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:3 3}
+.motif .warn-dot{fill:var(--accent);stroke:#fff;stroke-width:1.5}
+.motif .warn-lab{fill:var(--accent);font-weight:600}
+@media (prefers-reduced-motion:no-preference){
+  .motif .trend{stroke-dasharray:1100;stroke-dashoffset:1100;animation:draw 2.1s .25s ease-out forwards}
+  .motif .warn-grp{opacity:0;animation:fadein .5s 1.8s ease-out forwards}
+  .motif .warn-dot{animation:pulse 2.4s 2.3s ease-out infinite}
+}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes fadein{to{opacity:1}}
+@keyframes pulse{0%{r:5} 12%{r:8} 24%{r:5} 100%{r:5}}
+
+/* ---------- SECTIONS ---------- */
+section{padding:78px 0}
+.sec-head{margin-bottom:42px}
+.sec-head h2{font-size:30px;font-weight:600;letter-spacing:-.5px;margin-top:12px}
+.sec-head p{color:var(--muted);max-width:60ch;margin-top:10px;font-size:16px}
+
+/* what I build — the 4 layers */
+.layers{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--border);background:var(--surface)}
+.layer{padding:26px 22px;border-right:1px solid var(--border);position:relative}
+.layer:last-child{border-right:none}
+.layer-num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:1px}
+.layer h3{font-size:16px;font-weight:600;margin:14px 0 8px}
+.layer p{font-size:13.5px;color:var(--muted);line-height:1.5}
+.layer .flow{position:absolute;right:-9px;top:32px;font-size:16px;color:var(--border-2);z-index:2;background:var(--paper);width:18px;text-align:center}
+.layer:last-child .flow{display:none}
+
+/* projects */
+.project{background:var(--surface);border:1px solid var(--border);margin-bottom:24px}
+.project-head{padding:28px 32px 0}
+.project-tag{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.project-tag .n{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--accent);font-weight:600}
+.project-tag .kind{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#fff;background:var(--ink);padding:3px 9px;border-radius:3px}
+.project-tag .kind.demo{background:var(--accent)}
+.project h3{font-size:23px;font-weight:600;letter-spacing:-.3px}
+.project .lead{font-size:16px;color:var(--text);margin-top:10px;font-weight:500;max-width:70ch}
+.project-body{display:grid;grid-template-columns:1fr 1fr;gap:32px;padding:24px 32px 28px}
+.pb-block .lab{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--subtle);margin-bottom:8px}
+.pb-block p{font-size:14px;color:var(--muted);line-height:1.55}
+.results{display:flex;gap:28px;flex-wrap:wrap;margin-top:4px}
+.result .num{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:var(--ink);line-height:1}
+.result .lab{font-size:11px;color:var(--subtle);margin-top:4px}
+.project-foot{display:flex;justify-content:space-between;align-items:center;padding:18px 32px;border-top:1px solid var(--border);background:var(--surface-2);flex-wrap:wrap;gap:12px}
+.stack{display:flex;gap:7px;flex-wrap:wrap}
+.chip{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:4px 10px;background:var(--surface);border:1px solid var(--border-2);border-radius:3px;color:var(--muted)}
+.demo-link{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--accent);text-decoration:none;font-weight:600;white-space:nowrap}
+.demo-link:hover{text-decoration:underline}
+.note{font-size:11px;color:var(--subtle);font-style:italic;margin-top:6px}
+
+/* capabilities */
+.caps{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);border:1px solid var(--border)}
+.cap{background:var(--surface);padding:22px 24px}
+.cap h4{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.cap p{font-size:14px;color:var(--muted)}
+
+/* how I work */
+.how{background:var(--ink);color:#e2e8f0}
+.how .sec-head h2{color:#fff}
+.how-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.how-item .n{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent);letter-spacing:1px}
+.how-item h4{font-size:15px;font-weight:600;color:#fff;margin:10px 0 7px}
+.how-item p{font-size:13.5px;color:#94a3b8}
+
+/* contact */
+.contact{text-align:center}
+.contact h2{font-size:32px;font-weight:600;letter-spacing:-.5px}
+.contact p{color:var(--muted);max-width:50ch;margin:14px auto 30px;font-size:16px}
+.contact-links{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+footer{border-top:1px solid var(--border);padding:28px 0;text-align:center}
+footer .mono{font-size:11px;color:var(--subtle);letter-spacing:.5px}
+
+@media(max-width:880px){
+  .hero-grid{grid-template-columns:1fr;gap:34px}
+  .layers,.how-grid{grid-template-columns:repeat(2,1fr)}
+  .layer{border-bottom:1px solid var(--border)}
+  .layer .flow{display:none}
+  .project-body{grid-template-columns:1fr;gap:20px}
+  .caps{grid-template-columns:1fr}
+  .trust{grid-template-columns:repeat(2,1fr)}
+  .nav-links{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="wrap">
+    <nav class="nav">
+      <span class="nav-name"><b>SHEHERYAR ZIA KHAN</b> · operational systems</span>
+      <div class="nav-links">
+        <a href="#build">What I build</a>
+        <a href="#work">Work</a>
+        <a href="#how">Approach</a>
+        <a href="#contact">Contact</a>
+      </div>
+    </nav>
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow">Apps · Databases · Automation · Dashboards</span>
+        <h1>I build multi-layer operational systems — <span class="em">end to end.</span></h1>
+        <p class="hero-sub">A field app, a central database, automated workflows, and a live dashboard, working as one. I replace manual logging and per-seat software with systems built on tools you already own — and because I come from plant operations, they fit how the work actually happens.</p>
+        <div class="hero-cta">
+          <a href="#work" class="btn btn-primary">See the work</a>
+          <a href="#contact" class="btn btn-ghost">Get in touch</a>
+        </div>
+      </div>
+      <div>
+        <!-- SIGNATURE: a trend drifting toward an alarm limit, flagged early -->
+        <svg class="motif" viewBox="0 0 560 320" role="img" aria-label="A rising trend line flagged by an early-warning marker before it reaches the alarm limit.">
+          <!-- normal operating band -->
+          <rect class="band" x="40" y="206" width="480" height="64"/>
+          <!-- grid -->
+          <line class="grid-line" x1="40" y1="270" x2="520" y2="270"/>
+          <line class="grid-line" x1="40" y1="40"  x2="40"  y2="270"/>
+          <!-- alarm limit -->
+          <line class="limit" x1="40" y1="84" x2="520" y2="84"/>
+          <text class="lab lab-alarm" x="516" y="78" text-anchor="end">ALARM LIMIT</text>
+          <text class="lab" x="44" y="250">NORMAL BAND</text>
+          <!-- trend -->
+          <path class="trend" d="M40,236 L92,231 L144,237 L196,227 L248,223 L292,212 L324,200 L364,182 L412,158 L462,132 L510,108"/>
+          <!-- early-warning marker -->
+          <g class="warn-grp">
+            <line class="warn-line" x1="324" y1="92" x2="324" y2="270"/>
+            <circle class="warn-dot" cx="324" cy="200" r="5"/>
+            <text class="lab warn-lab" x="312" y="150" text-anchor="end">EARLY WARNING</text>
+            <text class="lab" x="312" y="166" text-anchor="end">flagged ~14 h before limit</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="trust">
+      <div class="trust-item"><div class="trust-num">100%</div><div class="trust-lab">Job Success · Upwork</div></div>
+      <div class="trust-item"><div class="trust-num">$30K<span style="font-size:14px">/yr</span></div><div class="trust-lab">Software cost removed</div></div>
+      <div class="trust-item"><div class="trust-num">~360</div><div class="trust-lab">Assets under governance</div></div>
+      <div class="trust-item"><div class="trust-num">4</div><div class="trust-lab">Layers, one system</div></div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ WHAT I BUILD ============ -->
+<section id="build">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">The pattern</span>
+      <h2>One system, four layers that hand off cleanly</h2>
+      <p>Most "tools" are a single piece — a form, or a spreadsheet, or a dashboard. The value is in connecting them so data flows from the field to the decision-maker without anyone re-keying it. That's what I build.</p>
+    </div>
+    <div class="layers">
+      <div class="layer"><div class="layer-num">01 · CAPTURE</div><h3>Field app</h3><p>A simple app for the people doing the work — structured input, photo proof, no training needed.</p><span class="flow">→</span></div>
+      <div class="layer"><div class="layer-num">02 · STORE</div><h3>Central database</h3><p>One source of truth with a built-in audit trail and role-based access. No more scattered files.</p><span class="flow">→</span></div>
+      <div class="layer"><div class="layer-num">03 · AUTOMATE</div><h3>Workflows</h3><p>Scheduled summaries, compliance checks, and escalations that chase the work so people don't have to.</p><span class="flow">→</span></div>
+      <div class="layer"><div class="layer-num">04 · DECIDE</div><h3>Live dashboard</h3><p>A real-time view that turns the data into oversight — and, where it matters, into foresight.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WORK ============ -->
+<section id="work" style="background:var(--surface-2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Selected work</span>
+      <h2>Three projects, one capability</h2>
+      <p>A deployed system that saved a real budget, a working demonstration of the predictive layer that sits above a control room, and an analytics tool that explains markets in plain language. All three are live and interactive — open them.</p>
+    </div>
+
+    <!-- PROJECT 01 -->
+    <article class="project">
+      <div class="project-head">
+        <div class="project-tag"><span class="n">01</span><span class="kind">Deployed system</span></div>
+        <h3>Industrial Safety Equipment Tracker</h3>
+        <p class="lead">Replaced $30,000/year of licensed software with a system built on the Microsoft 365 the company already paid for.</p>
+      </div>
+      <div class="project-body">
+        <div class="pb-block">
+          <div class="lab">The problem</div>
+          <p>A petrochemical plant tracked ~360 critical safety assets — extinguishers, breathing apparatus, safety showers, hydrants, lock-out boxes — by hand and through a $30K/year third-party app. No live oversight, no real audit trail, and easy to sign off an inspection without physically checking the equipment.</p>
+        </div>
+        <div class="pb-block">
+          <div class="lab">The system</div>
+          <p>A field app captures every inspection with mandatory photo proof, writing to a single SharePoint database with an automatic audit trail. Automated workflows run the governance — daily health summaries, compliance checks against the audit schedule, and a 72-hour escalation that pushes any unresolved deficiency up to management. A live dashboard gives leadership view-only oversight.</p>
+        </div>
+      </div>
+      <div class="project-body" style="padding-top:0">
+        <div class="pb-block">
+          <div class="lab">Results</div>
+          <div class="results">
+            <div class="result"><div class="num">$30K→$0</div><div class="lab">annual software cost</div></div>
+            <div class="result"><div class="num">~360</div><div class="lab">assets governed</div></div>
+            <div class="result"><div class="num">&lt;72h</div><div class="lab">to management alert</div></div>
+          </div>
+        </div>
+        <div class="pb-block">
+          <div class="lab">Why it works</div>
+          <p>Mandatory photo evidence kills "desk-auditing." Built entirely on owned infrastructure, so there's no per-seat license to renew. Rolled out in phases — pilot, harden, scale — the way real systems go live without disrupting operations.</p>
+        </div>
+      </div>
+      <div class="project-foot">
+        <div>
+          <div class="stack">
+            <span class="chip">Power Apps</span><span class="chip">SharePoint</span><span class="chip">Power Automate</span><span class="chip">Power BI</span><span class="chip">HTML/JS dashboard</span>
+          </div>
+          <div class="note">Presented with all internal data removed. Demo runs on synthetic data.</div>
+        </div>
+        <a class="demo-link" href="./safety_tracker_demo.html" target="_blank">Open the full system →</a>
+      </div>
+    </article>
+
+    <!-- PROJECT 02 -->
+    <article class="project">
+      <div class="project-head">
+        <div class="project-tag"><span class="n">02</span><span class="kind demo">Interactive demo</span></div>
+        <h3>TR-01 — Predictive Column Monitoring</h3>
+        <p class="lead">An early-warning layer that catches slow process drift days before it becomes an upset — the trend no single shift stays long enough to see.</p>
+      </div>
+      <div class="project-body">
+        <div class="pb-block">
+          <div class="lab">The problem</div>
+          <p>A control room's DCS owns the immediate — alarms, trips, second-by-second response. But fouling, drift, and creeping instability develop over <em>weeks</em>, while operators and supervisors rotate every 8–12 hours. Nobody stays on shift long enough to own the long view, so slow problems arrive as sudden surprises.</p>
+        </div>
+        <div class="pb-block">
+          <div class="lab">The system</div>
+          <p>A stewardship layer that sits <em>above</em> the control system. It watches each instrument's trend and the relationships between them, then flags developing failure signatures — reboiler fouling, column flooding, feed instability — with a predicted time-to-consequence and a suggested mitigation, while there's still time to plan rather than react.</p>
+        </div>
+      </div>
+      <div class="project-body" style="padding-top:0">
+        <div class="pb-block">
+          <div class="lab">The demonstration</div>
+          <div class="results">
+            <div class="result"><div class="num">33</div><div class="lab">tags monitored</div></div>
+            <div class="result"><div class="num">60d</div><div class="lab">of 3-hourly data</div></div>
+            <div class="result"><div class="num">3</div><div class="lab">upsets caught early</div></div>
+          </div>
+        </div>
+        <div class="pb-block">
+          <div class="lab">Why it works</div>
+          <p>It detects on the <em>rate</em> a value is moving and the way related tags diverge — not just fixed thresholds — so it sees trouble on the way up. Deliberately a transparent rule-and-trend engine, honestly extensible to machine learning once real failure history exists.</p>
+        </div>
+      </div>
+      <div class="project-foot">
+        <div class="stack">
+          <span class="chip">HTML/JS</span><span class="chip">Chart.js</span><span class="chip">Trend &amp; anomaly engine</span><span class="chip">Systems design</span>
+        </div>
+        <a class="demo-link" href="./tr01_instrumentation_monitor.html" target="_blank">Open interactive demo →</a>
+      </div>
+    </article>
+
+    <!-- PROJECT 03 -->
+    <article class="project">
+      <div class="project-head">
+        <div class="project-tag"><span class="n">03</span><span class="kind demo">Interactive demo</span></div>
+        <h3>MERIDIAN — PSX Equity &amp; Portfolio Analytics</h3>
+        <p class="lead">Turns a portfolio of stocks into a plain-English read on return, risk, and drawdown — with a guided assistant that explains the data and refuses to give advice.</p>
+      </div>
+      <div class="project-body">
+        <div class="pb-block">
+          <div class="lab">The problem</div>
+          <p>Retail investors drown in price noise and jargon. Most tools either dump raw numbers or push recommendations. The real need: see what a holding or portfolio actually did — how it grew, how much it swung, how deep it fell — and understand it without a finance degree.</p>
+        </div>
+        <div class="pb-block">
+          <div class="lab">The system</div>
+          <p>An equity-research-style tool that computes the metrics that matter — annualised return, volatility, max drawdown, Sharpe, and beta to the market — across a selectable portfolio, with growth, drawdown, and risk-return exhibits. A built-in assistant explains every number in plain language and deliberately refuses buy/sell advice.</p>
+        </div>
+      </div>
+      <div class="project-body" style="padding-top:0">
+        <div class="pb-block">
+          <div class="lab">Built around</div>
+          <div class="results">
+            <div class="result"><div class="num">5</div><div class="lab">PSX holdings</div></div>
+            <div class="result"><div class="num">3 yr</div><div class="lab">price history</div></div>
+            <div class="result"><div class="num">6</div><div class="lab">risk metrics</div></div>
+          </div>
+        </div>
+        <div class="pb-block">
+          <div class="lab">Why it works</div>
+          <p>Standard, defensible finance metrics — no black-box prediction. The risk-free rate is an editable input. The assistant informs but never advises, keeping it clear of the liability line.</p>
+        </div>
+      </div>
+      <div class="project-foot">
+        <div>
+          <div class="stack">
+            <span class="chip">HTML/JS</span><span class="chip">Chart.js</span><span class="chip">Financial analytics</span><span class="chip">Guided assistant</span>
+          </div>
+          <div class="note">Runs on sample data; structured to drop in real exported PSX prices.</div>
+        </div>
+        <a class="demo-link" href="./meridian_psx_analytics.html" target="_blank">Open interactive demo →</a>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============ CAPABILITIES ============ -->
+<section id="caps">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Capabilities</span>
+      <h2>What I work with</h2>
+    </div>
+    <div class="caps">
+      <div class="cap"><h4>Capture &amp; apps</h4><p>Microsoft Power Apps, custom web apps, field-ready data entry with validation and photo evidence.</p></div>
+      <div class="cap"><h4>Data &amp; structure</h4><p>SharePoint lists, schema design, audit trails, role-based permissions, REST API integration.</p></div>
+      <div class="cap"><h4>Automation</h4><p>Power Automate, scheduled and event-driven workflows, conditional escalation and state-machine logic.</p></div>
+      <div class="cap"><h4>Analytics &amp; dashboards</h4><p>Power BI, custom HTML/JavaScript dashboards, live data, trend and anomaly detection.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW I WORK ============ -->
+<section id="how" class="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Approach</span>
+      <h2>How I work</h2>
+    </div>
+    <div class="how-grid">
+      <div class="how-item"><div class="n">01</div><h4>Scope to what matters</h4><p>Fewer things tracked well beats everything tracked badly. I design for the high-value failure modes, not for completeness.</p></div>
+      <div class="how-item"><div class="n">02</div><h4>Build on what you own</h4><p>No new per-seat licenses where the tools you already pay for can do the job. The cheapest system is the one you don't have to buy twice.</p></div>
+      <div class="how-item"><div class="n">03</div><h4>Phase the rollout</h4><p>Pilot, harden, scale. Systems go live without disrupting the work they're meant to support.</p></div>
+      <div class="how-item"><div class="n">04</div><h4>Defensible by design</h4><p>Every choice — every threshold, every workflow — has a reason I can explain. No black boxes you can't trust.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONTACT ============ -->
+<section id="contact" class="contact">
+  <div class="wrap">
+    <span class="eyebrow">Get in touch</span>
+    <h2>Have a manual process worth automating?</h2>
+    <p>If you're logging something by hand, paying per seat for software you've outgrown, or flying blind on a slow problem — let's talk about the system that fixes it.</p>
+    <div class="contact-links">
+      <a class="btn btn-primary" href="#" data-edit="upwork">Upwork profile</a>
+      <a class="btn btn-ghost" style="border-color:var(--border-2);color:var(--text)" href="#" data-edit="linkedin">LinkedIn</a>
+      <a class="btn btn-ghost" style="border-color:var(--border-2);color:var(--text)" href="#" data-edit="github">GitHub</a>
+      <a class="btn btn-ghost" style="border-color:var(--border-2);color:var(--text)" href="#" data-edit="email">Email</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="mono">SHEHERYAR ZIA KHAN — OPERATIONAL SYSTEMS BUILDER · KARACHI, PK</span>
+  </div>
+</footer>
+
+</body>
+</html>

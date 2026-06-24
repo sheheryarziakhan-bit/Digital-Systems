@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Industrial Safety Equipment Tracker — Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --green:#0f7a52; --green-d:#0b5c3e; --green-l:#e8f3ee;
+  --bg:#f1f4f2; --surface:#ffffff; --surface-2:#f7faf8; --border:#e2e8e4; --border-2:#cdd8d1;
+  --ink:#13211b; --muted:#566860; --faint:#8a988f;
+  --ok:#16a34a; --ok-bg:#dcfce7; --bad:#dc2626; --bad-bg:#fee2e2; --due:#d97706; --due-bg:#fef3c7;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.5;-webkit-font-smoothing:antialiased}
+.jak{font-family:'Plus Jakarta Sans',sans-serif}
+.mono{font-family:'JetBrains Mono',monospace;font-feature-settings:"tnum" 1}
+
+/* header */
+.header{background:var(--green);color:#eafaf2;padding:0 26px}
+.h-top{display:flex;justify-content:space-between;align-items:center;padding:16px 0;flex-wrap:wrap;gap:12px}
+.h-brand{display:flex;align-items:center;gap:13px}
+.h-mark{width:34px;height:34px;border-radius:8px;background:#eafaf2;color:var(--green);display:flex;align-items:center;justify-content:center;font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:13px;letter-spacing:-.5px}
+.h-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:700;letter-spacing:-.3px}
+.h-sub{font-size:11px;color:rgba(234,250,242,.7);font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-top:1px}
+.h-unit{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(234,250,242,.85)}
+.h-unit select{font-family:'Inter',sans-serif;font-size:13px;padding:7px 11px;border-radius:6px;border:none;background:#eafaf2;color:var(--ink);cursor:pointer;font-weight:500}
+.tabs{display:flex;gap:2px}
+.tab{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;padding:11px 18px;color:rgba(234,250,242,.7);cursor:pointer;border-bottom:3px solid transparent}
+.tab:hover{color:#fff}
+.tab.active{color:#fff;border-bottom-color:#eafaf2}
+
+.wrap{max-width:1320px;margin:0 auto;padding:24px 26px}
+.view{display:none}
+.view.active{display:block}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:18px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;position:relative;overflow:hidden}
+.kpi-l{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:10px}
+.kpi-v{font-family:'Plus Jakarta Sans',sans-serif;font-size:30px;font-weight:800;line-height:1;letter-spacing:-1px}
+.kpi-m{font-size:11px;color:var(--muted);margin-top:6px;font-family:'JetBrains Mono',monospace}
+.kpi.ok .kpi-v{color:var(--ok)} .kpi.bad .kpi-v{color:var(--bad)} .kpi.due .kpi-v{color:var(--due)} .kpi.green .kpi-v{color:var(--green)}
+
+.row{display:grid;grid-template-columns:1fr 1.3fr;gap:14px;margin-bottom:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+.card-h{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px}
+.card-s{font-size:11px;color:var(--faint);font-family:'JetBrains Mono',monospace;letter-spacing:.5px;margin-bottom:14px}
+.chart-box{position:relative;height:240px}
+.chart-box.tall{height:300px}
+
+/* table */
+.tbl-controls{display:flex;gap:9px;margin-bottom:12px;flex-wrap:wrap}
+.tbl-controls input,.tbl-controls select{font-family:'Inter',sans-serif;font-size:13px;padding:8px 11px;border:1px solid var(--border-2);border-radius:7px;background:var(--surface)}
+.tbl-controls input{flex:1;min-width:160px}
+.tbl-wrap{max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{position:sticky;top:0;background:var(--surface-2);text-align:left;font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--faint);font-weight:700;padding:10px 13px;border-bottom:1px solid var(--border-2)}
+tbody td{padding:11px 13px;border-bottom:1px solid var(--border);color:var(--ink)}
+tbody tr:hover{background:var(--surface-2)}
+.mono-cell{font-family:'JetBrains Mono',monospace;font-size:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+.pill::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.bad{background:var(--bad-bg);color:var(--bad)}
+
+/* field app */
+.app-row{display:grid;grid-template-columns:340px 1fr;gap:20px}
+.phone{background:#0b5c3e;border-radius:22px;padding:10px;box-shadow:0 14px 40px rgba(11,92,62,.25)}
+.phone-screen{background:var(--surface);border-radius:14px;overflow:hidden;height:560px;display:flex;flex-direction:column}
+.phone-top{background:var(--green);color:#eafaf2;padding:13px 15px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.phone-list{flex:1;overflow-y:auto}
+.app-item{display:flex;align-items:center;gap:11px;padding:11px 13px;border-bottom:1px solid var(--border);cursor:pointer;position:relative}
+.app-item:hover{background:var(--surface-2)}
+.app-item.sel{background:var(--green-l)}
+.app-thumb{width:42px;height:42px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.app-item-main{flex:1;min-width:0}
+.app-item-t{font-weight:600;font-size:13px}
+.app-item-s{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-strip{width:5px;align-self:stretch;border-radius:3px;margin:-11px -13px -11px 0}
+.app-strip.ok{background:var(--ok)} .app-strip.bad{background:var(--bad)}
+.detail .card-h{margin-bottom:16px}
+.dfield{padding:11px 0;border-bottom:1px solid var(--border)}
+.dfield .l{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--green);font-weight:700;margin-bottom:3px}
+.dfield .v{font-size:14px}
+.photo-ph{margin-top:14px;background:var(--surface-2);border:1px dashed var(--border-2);border-radius:8px;padding:24px;text-align:center;color:var(--faint)}
+.photo-ph svg{opacity:.5}
+.photo-ph div{font-size:11px;margin-top:8px;font-family:'JetBrains Mono',monospace;letter-spacing:.5px}
+
+/* automation */
+.flows{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.flow{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;border-top:4px solid var(--green)}
+.flow-tag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--green);font-weight:600}
+.flow-h{font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;margin:8px 0 4px}
+.flow-trigger{font-size:11px;color:var(--due);font-family:'JetBrains Mono',monospace;font-weight:600;margin-bottom:14px}
+.flow-steps{list-style:none}
+.flow-steps li{position:relative;padding:0 0 16px 24px;font-size:13px;color:var(--muted)}
+.flow-steps li::before{content:'';position:absolute;left:6px;top:5px;width:8px;height:8px;border-radius:50%;background:var(--green);z-index:1}
+.flow-steps li::after{content:'';position:absolute;left:9px;top:10px;bottom:-4px;width:2px;background:var(--border-2)}
+.flow-steps li:last-child{padding-bottom:0}
+.flow-steps li:last-child::after{display:none}
+.flow-steps li b{color:var(--ink)}
+.flow-out{margin-top:14px;padding:11px 13px;background:var(--green-l);border-radius:7px;font-size:12px;color:var(--green-d)}
+.flow-out b{font-family:'Plus Jakarta Sans',sans-serif}
+
+.banner{background:#fdf6e6;border:1px solid #ecd9a8;color:#6b551c;font-size:12.5px;padding:10px 14px;border-radius:8px;margin-bottom:16px}
+
+/* assistant */
+#chatFab{position:fixed;right:22px;bottom:22px;z-index:60;background:var(--green);color:#eafaf2;border:none;border-radius:30px;padding:13px 20px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(15,122,82,.35);display:flex;align-items:center;gap:9px}
+#chatFab::before{content:'';width:8px;height:8px;border-radius:50%;background:#a7f3cf}
+#chatPanel{position:fixed;right:22px;bottom:22px;z-index:61;width:384px;max-width:calc(100vw - 28px);height:560px;max-height:calc(100vh - 44px);background:var(--surface);border:1px solid var(--border-2);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.22);display:flex;flex-direction:column;overflow:hidden}
+#chatPanel.chat-hidden{display:none}
+.chat-head{background:var(--green);color:#eafaf2;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start}
+.chat-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:700}
+.chat-sub{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.5px;color:rgba(234,250,242,.7);margin-top:3px}
+.chat-head button{background:none;border:none;color:rgba(234,250,242,.7);font-size:22px;cursor:pointer;line-height:1}
+.chat-log{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:11px}
+.msg{font-size:13.5px;line-height:1.5;max-width:90%;padding:10px 13px;border-radius:11px}
+.msg.bot{background:var(--surface-2);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:3px}
+.msg.user{background:var(--green);color:#eafaf2;align-self:flex-end;border-bottom-right-radius:3px}
+.chat-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px}
+.chip-q{font-size:11px;border:1px solid var(--border-2);background:var(--surface);color:var(--muted);border-radius:14px;padding:5px 10px;cursor:pointer;font-family:'Inter',sans-serif}
+.chip-q:hover{border-color:var(--green);color:var(--green)}
+.chat-input{display:flex;gap:8px;padding:11px 13px;border-top:1px solid var(--border)}
+.chat-input input{flex:1;border:1px solid var(--border-2);border-radius:8px;padding:9px 12px;font-family:'Inter',sans-serif;font-size:13px;outline:none}
+.chat-input button{background:var(--green);color:#fff;border:none;border-radius:8px;width:38px;font-size:16px;cursor:pointer}
+
+@media(max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}.row{grid-template-columns:1fr}.flows{grid-template-columns:1fr}.app-row{grid-template-columns:1fr}.phone{max-width:340px}}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="h-top">
+    <div class="h-brand">
+      <div class="h-mark">SE</div>
+      <div><div class="h-title">Safety Equipment Tracker</div><div class="h-sub">Industrial Inspection &amp; Compliance System</div></div>
+    </div>
+    <div class="h-unit">Unit
+      <select id="unitSel"><option>All Units</option><option>Unit A</option><option>Unit B</option></select>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-view="dash">Executive Dashboard</div>
+    <div class="tab" data-view="app">Field App</div>
+    <div class="tab" data-view="auto">Automation</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ===== DASHBOARD ===== -->
+  <div class="view active" id="view-dash">
+    <div class="banner">Demonstration on <b>synthetic data</b> — a generic, fully-anonymised rebuild of a deployed safety-equipment tracking system. No real facility data.</div>
+    <div class="kpis">
+      <div class="kpi green"><div class="kpi-l">Total Assets</div><div class="kpi-v jak" id="kTotal">—</div><div class="kpi-m">under governance</div></div>
+      <div class="kpi ok"><div class="kpi-l">Healthy</div><div class="kpi-v jak" id="kOk">—</div><div class="kpi-m" id="kOkM">—</div></div>
+      <div class="kpi bad"><div class="kpi-l">Unhealthy</div><div class="kpi-v jak" id="kBad">—</div><div class="kpi-m" id="kBadM">—</div></div>
+      <div class="kpi due"><div class="kpi-l">Overdue Audits</div><div class="kpi-v jak" id="kDue">—</div><div class="kpi-m">past 3-day cycle</div></div>
+      <div class="kpi green"><div class="kpi-l">Compliance</div><div class="kpi-v jak" id="kComp">—</div><div class="kpi-m">inspected on time</div></div>
+    </div>
+    <div class="row">
+      <div class="card"><div class="card-h">Health Status</div><div class="card-s">share of all assets</div><div class="chart-box"><canvas id="donut"></canvas></div></div>
+      <div class="card"><div class="card-h">Equipment Type Breakdown</div><div class="card-s">healthy vs unhealthy, per type</div><div class="chart-box"><canvas id="typeBar"></canvas></div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px"><div class="card-h">Assets by Area &amp; Health Status</div><div class="card-s">count per area</div><div class="chart-box tall"><canvas id="areaBar"></canvas></div></div>
+    <div class="card">
+      <div class="card-h">Asset Register</div><div class="card-s">live records · click the assistant to query this data</div>
+      <div class="tbl-controls">
+        <input id="tblSearch" placeholder="Search ID, location, deficiency...">
+        <select id="tblStatus"><option value="">All statuses</option><option>Healthy</option><option>Unhealthy</option></select>
+        <select id="tblType"><option value="">All types</option><option>Fire Extinguisher</option><option>Fire Hydrant</option><option>Safety Shower</option><option>Windsock</option></select>
+      </div>
+      <div class="tbl-wrap"><table><thead><tr><th>Area</th><th>Asset ID</th><th>Type</th><th>Location</th><th>Status</th><th>Deficiency</th></tr></thead><tbody id="tblBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ===== FIELD APP ===== -->
+  <div class="view" id="view-app">
+    <div class="banner">The field app operators use to log inspections. Every record carries <b>mandatory photo evidence</b> and writes to a single shared database with an automatic audit trail.</div>
+    <div class="app-row">
+      <div class="phone"><div class="phone-screen">
+        <div class="phone-top"><span>Safety Equipment</span><span class="mono" style="font-size:11px" id="appCount">—</span></div>
+        <div class="phone-list" id="appList"></div>
+      </div></div>
+      <div class="card detail" id="appDetail"></div>
+    </div>
+  </div>
+
+  <!-- ===== AUTOMATION ===== -->
+  <div class="view" id="view-auto">
+    <div class="banner">Three scheduled workflows run the governance loop automatically — no one has to chase the data. Recipients shown are generic roles.</div>
+    <div class="flows">
+      <div class="flow">
+        <div class="flow-tag">Flow 01 · Daily</div>
+        <div class="flow-h">Daily Health Summary</div>
+        <div class="flow-trigger">⏱ Recurrence · 06:00 daily</div>
+        <ul class="flow-steps">
+          <li>Read all asset records from the database</li>
+          <li>Aggregate <b>Healthy vs Unhealthy</b> counts</li>
+          <li>Flag any <b>new deficiencies</b> in the last 24h</li>
+          <li>Build a formatted HTML summary table</li>
+          <li>Email the digest to the site team</li>
+        </ul>
+        <div class="flow-out">→ <b>Site Team</b> gets a morning health digest, every day.</div>
+      </div>
+      <div class="flow">
+        <div class="flow-tag">Flow 02 · Compliance</div>
+        <div class="flow-h">Overdue Audit Check</div>
+        <div class="flow-trigger">⏱ Recurrence · 07:00 daily</div>
+        <ul class="flow-steps">
+          <li>Read all records, check last-inspected date</li>
+          <li>Filter assets <b>past their audit cycle</b> (Mon/Thu, Tue/Fri, Wed/Sat rotation)</li>
+          <li><b>Condition:</b> any overdue?</li>
+          <li>If yes → build overdue list</li>
+          <li>Email the responsible shift supervisor</li>
+        </ul>
+        <div class="flow-out">→ <b>Shift Supervisor</b> is nudged before a slot is missed.</div>
+      </div>
+      <div class="flow">
+        <div class="flow-tag">Flow 03 · Escalation</div>
+        <div class="flow-h">72-Hour Management Escalation</div>
+        <div class="flow-trigger">⏱ Recurrence · checks state</div>
+        <ul class="flow-steps">
+          <li>Find assets stuck in <b>Unhealthy &gt; 72 hours</b></li>
+          <li>Build a hardened escalation table</li>
+          <li>Compose the high-priority notice</li>
+          <li>Email Section In-Charge + Management</li>
+        </ul>
+        <div class="flow-out">→ Nothing unsafe sits unresolved &gt;72h without <b>management</b> seeing it.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<button id="chatFab">Ask the assistant</button>
+<div id="chatPanel" class="chat-hidden">
+  <div class="chat-head">
+    <div><div class="chat-title">Tracker Assistant</div><div class="chat-sub">EXPLAINS THE EQUIPMENT DATA · DEFERS SAFETY DECISIONS TO THE TEAM</div></div>
+    <button id="chatClose">&times;</button>
+  </div>
+  <div class="chat-log" id="chatLog"></div>
+  <div class="chat-chips" id="chatChips"></div>
+  <div class="chat-input"><input id="chatInput" placeholder="Ask about status, areas, deficiencies..."><button id="chatSend">&rarr;</button></div>
+</div>
+
+<script>
+/* ============================================================================
+   Industrial Safety Equipment Tracker (demo). 4-layer system shown:
+   field app -> central data -> automation -> dashboard. All data synthetic.
+   ============================================================================ */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const rng=mulberry32(90210);
+const pick=arr=>arr[Math.floor(rng()*arr.length)];
+
+const TYPES=[
+  {t:'Fire Extinguisher', code:'FE', n:55, locs:['Near Pump P-101','Beside MCC Room','Stairwell Level 2','Near Exchanger E-203','Control Room Entry','Near Vessel V-110','Loading Bay Gate','Near Compressor K-201','Workshop Bay 3','Corridor B-2'], defs:['Pressure gauge low','Safety pin/seal missing','Hydro-test expired','Nozzle blocked','Body corroded','Mounting bracket loose']},
+  {t:'Fire Hydrant',     code:'FH', n:20, locs:['Road Junction R-2','North Perimeter','Tank Farm Bund T-4','South Gate','Near Flare K-9','Pumphouse Yard','East Access Road'], defs:['Hose damaged','Valve leaking','Cap missing','Outlet corroded','Low line pressure']},
+  {t:'Safety Shower',    code:'SS', n:15, locs:['Beside Vessel V-203','Acid Dosing Skid','Lab Entry','Near Reactor R-301','Sampling Point S-12','Drum Storage'], defs:['Low water flow','Eyewash nozzle blocked','Activation handle stiff','Floor drain blocked','Signage missing']},
+  {t:'Windsock',         code:'WS', n:10, locs:['Process Stack S-1','Admin Rooftop','Tank Farm Mast','Control Room Roof'], defs:['Fabric torn','Frame bent','Faded / illegible','Swivel bearing seized']},
+];
+const AREAS=['100','200','300','400','500','600'];
+const UNITS=['Unit A','Unit B'];
+const INSPECTORS=['A. Rauf','S. Iqbal','H. Malik','F. Nadeem','T. Aslam'];
+
+const ITEMS=[]; let seq={FE:0,FH:0,SS:0,WS:0};
+TYPES.forEach(T=>{
+  for(let i=0;i<T.n;i++){
+    seq[T.code]++;
+    const unhealthy=rng()<0.30;
+    const days=Math.floor(rng()*rng()*10);   // skew low; some overdue
+    ITEMS.push({
+      id:`${T.code}-${String(seq[T.code]).padStart(3,'0')}`,
+      type:T.t, unit:rng()<0.6?UNITS[0]:UNITS[1], area:pick(AREAS), loc:pick(T.locs),
+      status:unhealthy?'Unhealthy':'Healthy',
+      deficiency:unhealthy?pick(T.defs):'', closure:unhealthy?(rng()<0.5?'Work order raised':'Pending repair'):'OK',
+      by:pick(INSPECTORS), days, overdue:days>3
+    });
+  }
+});
+
+let unit='All Units', charts={}, selApp=ITEMS[0];
+const items=()=>unit==='All Units'?ITEMS:ITEMS.filter(i=>i.unit===unit);
+
+/* ---- dashboard ---- */
+function renderDash(){
+  const D=items(), tot=D.length, ok=D.filter(i=>i.status==='Healthy').length, bad=tot-ok, due=D.filter(i=>i.overdue).length;
+  document.getElementById('kTotal').textContent=tot;
+  document.getElementById('kOk').textContent=ok; document.getElementById('kOkM').textContent=(ok/tot*100).toFixed(1)+'% of fleet';
+  document.getElementById('kBad').textContent=bad; document.getElementById('kBadM').textContent=(bad/tot*100).toFixed(1)+'% of fleet';
+  document.getElementById('kDue').textContent=due;
+  document.getElementById('kComp').textContent=((tot-due)/tot*100).toFixed(0)+'%';
+  drawDonut(ok,bad); drawTypeBar(D); drawAreaBar(D); renderTable();
+}
+function drawDonut(ok,bad){
+  if(charts.d)charts.d.destroy();
+  charts.d=new Chart(document.getElementById('donut'),{type:'doughnut',
+    data:{labels:['Healthy','Unhealthy'],datasets:[{data:[ok,bad],backgroundColor:['#16a34a','#dc2626'],borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{font:{family:'Inter',size:12},boxWidth:11,padding:14,usePointStyle:true}}}}});
+}
+function drawTypeBar(D){
+  const labels=TYPES.map(T=>T.t);
+  const okD=labels.map(l=>D.filter(i=>i.type===l&&i.status==='Healthy').length);
+  const badD=labels.map(l=>D.filter(i=>i.type===l&&i.status==='Unhealthy').length);
+  if(charts.t)charts.t.destroy();
+  charts.t=new Chart(document.getElementById('typeBar'),{type:'bar',
+    data:{labels,datasets:[{label:'Healthy',data:okD,backgroundColor:'#16a34a'},{label:'Unhealthy',data:badD,backgroundColor:'#dc2626'}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{family:'Inter',size:11},boxWidth:10,usePointStyle:true,padding:12}}},
+      scales:{x:{stacked:true,ticks:{font:{family:'JetBrains Mono',size:10},color:'#8a988f'},grid:{color:'#eef3f0'}},y:{stacked:true,ticks:{font:{family:'Inter',size:11},color:'#566860'},grid:{display:false}}}}});
+}
+function drawAreaBar(D){
+  const okD=AREAS.map(a=>D.filter(i=>i.area===a&&i.status==='Healthy').length);
+  const badD=AREAS.map(a=>D.filter(i=>i.area===a&&i.status==='Unhealthy').length);
+  if(charts.a)charts.a.destroy();
+  charts.a=new Chart(document.getElementById('areaBar'),{type:'bar',
+    data:{labels:AREAS.map(a=>'Area '+a),datasets:[{label:'Healthy',data:okD,backgroundColor:'#16a34a'},{label:'Unhealthy',data:badD,backgroundColor:'#dc2626'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{family:'Inter',size:11},boxWidth:10,usePointStyle:true,padding:12}}},
+      scales:{x:{stacked:true,ticks:{font:{family:'Inter',size:11},color:'#566860'},grid:{display:false}},y:{stacked:true,ticks:{font:{family:'JetBrains Mono',size:10},color:'#8a988f'},grid:{color:'#eef3f0'}}}}});
+}
+function renderTable(){
+  const q=(document.getElementById('tblSearch').value||'').toLowerCase();
+  const st=document.getElementById('tblStatus').value, ty=document.getElementById('tblType').value;
+  const rows=items().filter(i=>(!st||i.status===st)&&(!ty||i.type===ty)&&(!q||(i.id+i.loc+i.deficiency).toLowerCase().includes(q)));
+  document.getElementById('tblBody').innerHTML=rows.map(i=>`<tr>
+    <td class="mono-cell">${i.area}</td><td class="mono-cell">${i.id}</td><td>${i.type}</td><td>${i.loc}</td>
+    <td><span class="pill ${i.status==='Healthy'?'ok':'bad'}">${i.status}</span></td><td>${i.deficiency||'—'}</td></tr>`).join('')
+    || `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--faint)">No matching records.</td></tr>`;
+}
+
+/* ---- field app ---- */
+const CAM='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8a988f" stroke-width="1.6"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M8 6l1.5-2h5L16 6"/></svg>';
+function renderApp(){
+  const D=items();
+  document.getElementById('appCount').textContent=D.length+' items';
+  document.getElementById('appList').innerHTML=D.map(i=>`<div class="app-item ${selApp&&selApp.id===i.id?'sel':''}" data-id="${i.id}">
+    <div class="app-thumb">${CAM}</div>
+    <div class="app-item-main"><div class="app-item-t">${i.id}</div><div class="app-item-s">${i.loc} · ${i.type}</div></div>
+    <div class="app-strip ${i.status==='Healthy'?'ok':'bad'}"></div></div>`).join('');
+  document.querySelectorAll('.app-item').forEach(el=>el.onclick=()=>{selApp=ITEMS.find(x=>x.id===el.dataset.id);renderApp();});
+  if(!D.includes(selApp)) selApp=D[0];
+  renderDetail();
+}
+function renderDetail(){
+  const i=selApp; if(!i){document.getElementById('appDetail').innerHTML='';return;}
+  const f=(l,v)=>`<div class="dfield"><div class="l">${l}</div><div class="v">${v||'—'}</div></div>`;
+  document.getElementById('appDetail').innerHTML=`<div class="card-h">Inspection Record — ${i.id}</div>
+    ${f('Asset ID',i.id)}${f('Area / Unit',i.area+' · '+i.unit)}${f('Equipment Type',i.type)}${f('Location',i.loc)}
+    ${f('Health Status',`<span class="pill ${i.status==='Healthy'?'ok':'bad'}">${i.status}</span>`)}
+    ${f('Deficiency Description',i.deficiency)}${f('Closure Remarks',i.closure)}
+    ${f('Last Inspected By',i.by)}${f('Days Since Inspection',i.days+' day(s)'+(i.overdue?' · <b style="color:var(--due)">OVERDUE</b>':''))}
+    <div class="photo-ph">${CAM}<div>PHOTO ON FILE · MANDATORY EVIDENCE</div></div>`;
+}
+
+/* ---- guided assistant (scripted; reads live data; defers safety calls) ---- */
+function assetAnswer(q){
+  const s=q.toLowerCase(), D=items();
+  const tot=D.length, ok=D.filter(i=>i.status==='Healthy').length, bad=tot-ok, due=D.filter(i=>i.overdue).length;
+  if(/should (i|we)|safe to use|certify|sign off|skip|is it safe|pass the audit|approve|condemn|decommission/.test(s))
+    return "I can't certify equipment as safe or make audit/sign-off calls \u2014 those belong to the safety team and the responsible engineer. I only report what the records show. Try: <i>\u201chow many are unhealthy?\u201d</i>, <i>\u201cwhich area is worst?\u201d</i>, or <i>\u201cwhat's overdue?\u201d</i>";
+  if(/overdue|past due|audit.*(due|late)|not inspected/.test(s)){
+    const list=D.filter(i=>i.overdue);
+    const byArea={}; list.forEach(i=>byArea[i.area]=(byArea[i.area]||0)+1);
+    const top=Object.entries(byArea).sort((a,b)=>b[1]-a[1])[0];
+    return `<b>${due}</b> asset(s) are past the 3-day audit cycle${unit!=='All Units'?' in '+unit:''}. ${top?`The area with the most overdue is <b>Area ${top[0]}</b> (${top[1]}).`:''} Flow 02 emails the shift supervisor about these automatically each morning.`;
+  }
+  if(/worst area|which area|most (unhealthy|deficien|problem).*area|area.*most/.test(s)){
+    const byArea={}; D.filter(i=>i.status==='Unhealthy').forEach(i=>byArea[i.area]=(byArea[i.area]||0)+1);
+    const sorted=Object.entries(byArea).sort((a,b)=>b[1]-a[1]);
+    if(!sorted.length) return "No unhealthy assets in the current view \u2014 every area is clear.";
+    return `By unhealthy count, <b>Area ${sorted[0][0]}</b> leads with <b>${sorted[0][1]}</b> unhealthy asset(s)${sorted[1]?`, then Area ${sorted[1][0]} (${sorted[1][1]})`:''}.`;
+  }
+  if(/worst type|which (type|equipment).*(worst|unhealthy)|type.*most/.test(s)){
+    const r=TYPES.map(T=>{const set=D.filter(i=>i.type===T.t);const b=set.filter(i=>i.status==='Unhealthy').length;return{t:T.t,b,pct:set.length?b/set.length*100:0};}).sort((a,b)=>b.pct-a.pct);
+    return `By unhealthy share, <b>${r[0].t}</b> is highest at <b>${r[0].pct.toFixed(0)}%</b> (${r[0].b} unhealthy)${r[1]?`, followed by ${r[1].t} at ${r[1].pct.toFixed(0)}%`:''}.`;
+  }
+  for(const T of TYPES){ if(s.includes(T.t.toLowerCase())||s.includes(T.code.toLowerCase())){
+    const set=D.filter(i=>i.type===T.t), b=set.filter(i=>i.status==='Unhealthy').length;
+    return `There are <b>${set.length}</b> ${T.t.toLowerCase()}(s)${unit!=='All Units'?' in '+unit:''}: <b>${set.length-b}</b> healthy, <b>${b}</b> unhealthy${b?` (${set.filter(i=>i.status==='Unhealthy').slice(0,4).map(i=>i.id).join(', ')}${b>4?'…':''})`:''}.`;
+  }}
+  if(/unhealthy|deficien|broken|faulty|need.*(repair|attention)|red/.test(s)){
+    const list=D.filter(i=>i.status==='Unhealthy');
+    return `<b>${bad}</b> of ${tot} assets are unhealthy${unit!=='All Units'?' in '+unit:''} (${(bad/tot*100).toFixed(0)}%). Examples: ${list.slice(0,5).map(i=>`${i.id} (${i.deficiency})`).join('; ')}${bad>5?'…':''}. Open the Asset Register or Field App for the full list.`;
+  }
+  if(/healthy|good|ok|green|how many.*(total|asset)|fleet|overview|summary|status/.test(s)){
+    return `Current view${unit!=='All Units'?' ('+unit+')':''}: <b>${tot}</b> assets \u2014 <b>${ok}</b> healthy (${(ok/tot*100).toFixed(0)}%), <b>${bad}</b> unhealthy, <b>${due}</b> overdue on audit. Ask me to break it down by area or equipment type.`;
+  }
+  if(/compliance|on time|inspected/.test(s)) return `Audit compliance is <b>${((tot-due)/tot*100).toFixed(0)}%</b> \u2014 that share was inspected within the 3-day cycle. The remaining <b>${due}</b> are overdue and get auto-escalated by Flow 02.`;
+  if(/automat|flow|escalat|72|notif|email|reminder/.test(s)) return "Three workflows run the governance: <b>Flow 01</b> emails a daily health summary at 06:00; <b>Flow 02</b> checks the audit schedule at 07:00 and nudges the supervisor about overdue items; <b>Flow 03</b> escalates anything stuck unhealthy beyond <b>72 hours</b> to management. See the Automation tab.";
+  if(/photo|evidence|desk.?audit/.test(s)) return "Every inspection in the field app requires a <b>photo</b> before it can be submitted \u2014 that's what stops \u201cdesk-auditing\u201d (signing off without physically checking). You can see the photo slot on any record in the Field App tab.";
+  return "I report what the equipment records show \u2014 try <i>\u201chow many are unhealthy?\u201d</i>, <i>\u201cwhich area is worst?\u201d</i>, <i>\u201cwhat's overdue?\u201d</i>, <i>\u201chow many fire hydrants?\u201d</i>, or <i>\u201cwhat do the automations do?\u201d</i> I don't make safety or sign-off decisions \u2014 those stay with the team.";
+}
+function setupChat(){
+  const log=document.getElementById('chatLog'), input=document.getElementById('chatInput');
+  const chips=["Give me a status summary","Which area is worst?","What's overdue?","What do the automations do?"];
+  const add=(role,html)=>{const d=document.createElement('div');d.className='msg '+role;d.innerHTML=html;log.appendChild(d);log.scrollTop=log.scrollHeight;};
+  const ask=q=>{add('user',q.replace(/</g,'&lt;'));setTimeout(()=>add('bot',assetAnswer(q)),130);};
+  document.getElementById('chatChips').innerHTML=chips.map(c=>`<button class="chip-q">${c}</button>`).join('');
+  document.querySelectorAll('.chip-q').forEach(b=>b.onclick=()=>ask(b.textContent));
+  const send=()=>{const v=input.value.trim();if(!v)return;input.value='';ask(v);};
+  document.getElementById('chatSend').onclick=send;
+  input.onkeydown=e=>{if(e.key==='Enter')send();};
+  document.getElementById('chatFab').onclick=()=>{document.getElementById('chatPanel').classList.remove('chat-hidden');document.getElementById('chatFab').style.display='none';if(!log.children.length)add('bot',"Hi \u2014 I'm a guided assistant for this safety-equipment system. I explain what the records show, across whatever unit you've selected. I don't make safety or sign-off calls. What would you like to know?");};
+  document.getElementById('chatClose').onclick=()=>{document.getElementById('chatPanel').classList.add('chat-hidden');document.getElementById('chatFab').style.display='flex';};
+}
+
+/* ---- wiring ---- */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+t.dataset.view).classList.add('active');
+  if(t.dataset.view==='app')renderApp();
+});
+document.getElementById('unitSel').onchange=e=>{unit=e.target.value;selApp=items()[0];renderDash();if(document.getElementById('view-app').classList.contains('active'))renderApp();};
+['tblSearch','tblStatus','tblType'].forEach(id=>document.getElementById(id).addEventListener('input',renderTable));
+
+renderDash(); setupChat();
+</script>
+</body>
+</html>
